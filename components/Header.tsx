@@ -15,8 +15,31 @@ export default function Header() {
     router.push("/");
   };
 
+  const status =
+    typeof window !== "undefined"
+      ? localStorage.getItem("status")
+      : null;
+
+  const emoji =
+    status === "Ausente"
+      ? "🟡"
+      : status === "Reuniao"
+      ? "🔴"
+      : "🟢";
+
   return (
-    <header className="flex items-center justify-between border-b bg-slate-900 px-6 py-4 text-white">
+    <header
+      className="
+        flex
+        items-center
+        justify-between
+        border-b
+        bg-slate-950
+        px-6
+        py-4
+        text-white
+      "
+    >
       <div className="flex items-center gap-4">
         <img
           src="/logo.png"
@@ -25,7 +48,7 @@ export default function Header() {
         />
 
         <div>
-          <h1 className="text-xl font-bold">
+          <h1 className="text-2xl font-bold">
             INTERNIT OFFICE
           </h1>
 
@@ -35,10 +58,16 @@ export default function Header() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <span className="text-sm">
-          {user?.nome || "Usuário"}
-        </span>
+      <div className="flex items-center gap-6">
+        <div className="text-right">
+          <div>
+            👤 {user?.nome}
+          </div>
+
+          <div className="text-sm text-slate-300">
+            {emoji} {status || "Disponível"}
+          </div>
+        </div>
 
         <button
           onClick={logout}
