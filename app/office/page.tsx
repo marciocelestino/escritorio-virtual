@@ -1,13 +1,15 @@
 "use client";
-
+import Notification from "@/components/Notification";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import UserCard from "@/components/UserCard";
+import RoomPresence from "@/components/RoomPresence";
 import StatusSelector from "@/components/StatusSelector";
 import { getSessionUser } from "@/lib/session";
+import RoomView from "@/components/RoomView";
 
 import usersData from "@/data/usuarios.json";
 
@@ -18,6 +20,7 @@ type UserItem = {
   senha?: string;
   status: "Disponivel" | "Ausente" | "Reuniao";
   online?: boolean;
+  room: string;
 };
 
 export default function OfficePage() {
@@ -33,42 +36,88 @@ export default function OfficePage() {
       "Reuniao"
     >("Disponivel");
 
+    const [currentUserId, setCurrentUserId] =
+  useState<number | null>(null);
+
+  const [notification, setNotification] =
+  useState("");
+
+function moveToRoom(
+  room: string
+) {
+
+  if (!currentUserId) {
+    return;
+  }
+
+  setCurrentRoom(room);
+
+  setAllUsers((prev) =>
+    prev.map((user) => {
+
+      if (
+        user.id === currentUserId
+      ) {
+        return {
+          ...user,
+          room,
+        };
+      }
+
+      return user;
+    })
+  );
+}
+
+function showNotification(
+  message: string
+) {
+  setNotification(message);
+
+  setTimeout(() => {
+    setNotification("");
+  }, 3000);
+}
+
   const [mounted, setMounted] =
     useState(false);
 
-  const allUsers =
-    usersData as UserItem[];
-
+ const [allUsers, setAllUsers] =
+  useState<UserItem[]>(
+    usersData as UserItem[]
+  );
   const onlineUsers = useMemo(() => {
-    return allUsers.filter(
-      (user) => user.online !== false
-    );
-  }, []);
+  return allUsers.filter(
+    (user) => user.online !== false
+  );
+}, [allUsers]);
 
   useEffect(() => {
 
-    setMounted(true);
+  setMounted(true);
 
-    const user =
-      getSessionUser();
+  const user =
+    getSessionUser();
 
-    if (!user) {
-      router.push("/");
-      return;
-    }
+  if (!user) {
+    router.push("/");
+    return;
+  }
 
-    const savedStatus =
-      localStorage.getItem("status");
+  setCurrentUserId(user.id);
 
-    if (
-      savedStatus === "Disponivel" ||
-      savedStatus === "Ausente" ||
-      savedStatus === "Reuniao"
-    ) {
-      setStatus(savedStatus);
-    }
+  const savedStatus =
+    localStorage.getItem("status");
 
-  }, [router]);
+  if (
+    savedStatus === "Disponivel" ||
+    savedStatus === "Ausente" ||
+    savedStatus === "Reuniao"
+  ) {
+    setStatus(savedStatus);
+  }
+
+}, [router]);
 
   useEffect(() => {
 
@@ -103,15 +152,20 @@ export default function OfficePage() {
   return (
 
     <main className="flex h-screen flex-col bg-slate-100">
+      {notification && (
+        <Notification
+          message={notification}
+        />
+)}
 
       <Header />
 
       <div className="flex flex-1 overflow-hidden">
 
         <Sidebar
-          currentRoom={currentRoom}
-          onRoomChange={setCurrentRoom}
-        />
+  currentRoom={currentRoom}
+  onRoomChange={moveToRoom}
+/>
 
         <section
           className="
@@ -218,15 +272,12 @@ export default function OfficePage() {
               >
 
                 🌳 Árvores
-
                 <br />
 
                 🌿 Área de descanso
-
                 <br />
 
                 🦆 Pequeno lago
-
                 <br />
 
                 ☕ Conversas informais
@@ -246,7 +297,12 @@ export default function OfficePage() {
               <p>
                 👥 Usuários presentes:
                 {" "}
-                {onlineUsers.length}
+                {
+                  onlineUsers.filter(
+                    (user) =>
+                      user.room === currentRoom
+                  ).length
+                }
               </p>
 
               <p>
@@ -259,7 +315,15 @@ export default function OfficePage() {
                 🟢 Status:
                 Aberta
               </p>
-
+<RoomView
+  room={currentRoom}
+  users={onlineUsers}
+  onUserClick={(name) =>
+    showNotification(
+      `Você chamou ${name}`
+    )
+  }
+/>
             </div>
 
           </div>
@@ -269,7 +333,8 @@ export default function OfficePage() {
               grid
               gap-4
               md:grid-cols-2
-              xl:grid-cols-3
+              xl:grid-cols-2
+              2xl:grid-cols-4
             "
           >
 
@@ -300,7 +365,8 @@ export default function OfficePage() {
                 "
               >
                 Em breve teremos
-                áudio, webcam,
+                áudio,
+                webcam,
                 compartilhamento de tela
                 e movimentação em tempo real.
               </p>
@@ -368,11 +434,17 @@ export default function OfficePage() {
               >
                 Cutucar usuários,
                 presença online,
-                áudio, webcam e
+                áudio,
+                webcam e
                 compartilhamento de tela.
               </p>
 
             </div>
+
+            <RoomPresence
+              room={currentRoom}
+              users={onlineUsers}
+            />
 
           </div>
 

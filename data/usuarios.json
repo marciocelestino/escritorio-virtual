@@ -5,6 +5,25 @@
     "email": "marcio@internit.com.br",
     "senha": "internit123",
     "status": "Disponivel",
-    "online": true
+    "online": true,
+    "room": "Recepção"
+  },
+  {
+    "id": 2,
+    "nome": "João Silva",
+    "email": "joao@internit.com.br",
+    "senha": "123456",
+    "status": "Disponivel",
+    "online": true,
+    "room": "Sala de Reunião"
+  },
+  {
+    "id": 3,
+    "nome": "Maria Souza",
+    "email": "maria@internit.com.br",
+    "senha": "123456",
+    "status": "Ausente",
+    "online": true,
+    "room": "Espaço Natureza"
   }
 ]
