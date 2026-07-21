@@ -1,15 +1,21 @@
 "use client";
 
 import rooms from "@/data/salas.json";
-import users from "@/data/usuarios.json";
+
+type SidebarUser = {
+  room: string;
+  online?: boolean;
+};
 
 type Props = {
   currentRoom: string;
+  users: SidebarUser[];
   onRoomChange: (room: string) => void;
 };
 
 export default function Sidebar({
   currentRoom,
+  users,
   onRoomChange,
 }: Props) {
 

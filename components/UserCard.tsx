@@ -1,6 +1,6 @@
 type Props = {
   nome: string;
-  status: string;
+  status?: string;
 };
 
 export default function UserCard({
@@ -35,7 +35,7 @@ export default function UserCard({
       </div>
 
       <div className="mt-1 text-sm text-slate-500">
-        {getStatusIcon()} {status}
+        {getStatusIcon()} {status ?? "Disponível"}
       </div>
     </div>
   );

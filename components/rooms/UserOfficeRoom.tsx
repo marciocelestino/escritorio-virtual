@@ -4,7 +4,7 @@ type User = {
   id: number;
   nome: string;
   room: string;
-  status: string;
+  status?: string;
 };
 
 type Props = {

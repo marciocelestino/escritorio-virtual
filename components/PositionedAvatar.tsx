@@ -1,10 +1,10 @@
 type Props = {
   nome: string;
-  status: string;
+  status?: string;
+  isCurrentUser: boolean;
   x: number;
   y: number;
-  isCurrentUser?: boolean;
-  onClick?: () => void;
+  onClick: () => void;
 };
 
 export default function PositionedAvatar({

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 
@@ -41,10 +42,12 @@ export default function Header() {
       "
     >
       <div className="flex items-center gap-4">
-        <img
+        <Image
           src="/logo.png"
           alt="Internit"
-          className="h-10"
+          width={200}
+          height={70}
+          className="h-10 w-auto"
         />
 
         <div>

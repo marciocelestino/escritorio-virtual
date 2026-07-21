@@ -1,3 +1,3 @@
-import users from "../../data/usuarios.json";
+import users from "../data/usuarios.json";
 
 export const getUsers = () => users;

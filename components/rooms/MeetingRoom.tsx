@@ -4,7 +4,7 @@ type User = {
   id: number;
   nome: string;
   room: string;
-  status: string;
+  status?: string;
 };
 
 type Props = {
@@ -87,10 +87,10 @@ export default function MeetingRoom({
   nome={user.nome}
   status={user.status}
   isCurrentUser={
-    user.id === 1
+    user.id === currentUserId
   }
-  x={320}
-  y={150}
+  x={pos.x}
+  y={pos.y}
   onClick={() =>
   onUserClick(user.nome)
 }

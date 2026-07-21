@@ -2,17 +2,19 @@ import ReceptionRoom from "./rooms/ReceptionRoom";
 import MeetingRoom from "./rooms/MeetingRoom";
 import NatureRoom from "./rooms/NatureRoom";
 import UserOfficeRoom from "./rooms/UserOfficeRoom";
+import VideoMeeting from "./VideoMeeting";
 
 type User = {
   id: number;
   nome: string;
   room: string;
-  status: string;
+  status?: string;
 };
 
 type Props = {
   room: string;
   users: User[];
+  currentUserId: number;
   onUserClick: (
     userName: string
   ) => void;
@@ -20,6 +22,7 @@ type Props = {
 export default function RoomView({
   room,
   users,
+  currentUserId,
   onUserClick,
 }: Props) {
 
@@ -32,27 +35,31 @@ export default function RoomView({
     return (
       <ReceptionRoom
         users={roomUsers}
-        currentUserId={1}
+        currentUserId={currentUserId}
         onUserClick={onUserClick}
       />
     );
   }
 
-  if (room === "Sala de Reunião") {
-    return (
+if (room === "Sala de Reunião") {
+  return (
+    <>
       <MeetingRoom
         users={roomUsers}
-        currentUserId={1}
+        currentUserId={currentUserId}
         onUserClick={onUserClick}
       />
-          );
-  }
+
+      <VideoMeeting />
+    </>
+  );
+}
 
   if (room === "Espaço Natureza") {
     return (
       <NatureRoom
         users={roomUsers}
-        currentUserId={1}
+        currentUserId={currentUserId}
         onUserClick={onUserClick}
       />
           );
@@ -62,7 +69,7 @@ export default function RoomView({
       <UserOfficeRoom
         room={room}
         users={roomUsers}
-        currentUserId={1}
+        currentUserId={currentUserId}
         onUserClick={onUserClick}
       />
   );

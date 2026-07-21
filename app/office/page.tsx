@@ -1,4 +1,6 @@
 "use client";
+import { getSocket }
+from "@/lib/socket";
 import Notification from "@/components/Notification";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,19 +10,27 @@ import Sidebar from "@/components/Sidebar";
 import UserCard from "@/components/UserCard";
 import RoomPresence from "@/components/RoomPresence";
 import StatusSelector from "@/components/StatusSelector";
-import { getSessionUser } from "@/lib/session";
+import { getSessionUser, getSessionToken } from "@/lib/session";
 import RoomView from "@/components/RoomView";
-
-import usersData from "@/data/usuarios.json";
 
 type UserItem = {
   id: number;
   nome: string;
-  email: string;
-  senha?: string;
-  status: "Disponivel" | "Ausente" | "Reuniao";
+  email?: string;
+  status?:
+    | "Disponivel"
+    | "Ausente"
+    | "Reuniao";
   online?: boolean;
   room: string;
+};
+
+type LivePresence = {
+  room: string;
+  status?:
+    | "Disponivel"
+    | "Ausente"
+    | "Reuniao";
 };
 
 export default function OfficePage() {
@@ -35,6 +45,9 @@ export default function OfficePage() {
       "Ausente" |
       "Reuniao"
     >("Disponivel");
+
+    const [lastActivity, setLastActivity] =
+  useState(() => Date.now());
 
     const [currentUserId, setCurrentUserId] =
   useState<number | null>(null);
@@ -52,21 +65,40 @@ function moveToRoom(
 
   setCurrentRoom(room);
 
-  setAllUsers((prev) =>
-    prev.map((user) => {
+  const socket =
+  getSocket();
 
-      if (
-        user.id === currentUserId
-      ) {
-        return {
-          ...user,
-          room,
-        };
-      }
-
-      return user;
-    })
+if (
+  socket &&
+  currentUserId
+) {
+  socket.emit(
+    "room-change",
+    {
+      userId:
+        currentUserId,
+      room,
+    }
   );
+}
+
+  setLiveUsers((prev) => {
+
+    const current =
+      prev[currentUserId];
+
+    if (!current) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      [currentUserId]: {
+        ...current,
+        room,
+      },
+    };
+  });
 }
 
 function showNotification(
@@ -82,10 +114,34 @@ function showNotification(
   const [mounted, setMounted] =
     useState(false);
 
- const [allUsers, setAllUsers] =
-  useState<UserItem[]>(
-    usersData as UserItem[]
-  );
+ const [roster, setRoster] =
+  useState<UserItem[]>([]);
+
+  const [liveUsers, setLiveUsers] =
+  useState<
+    Record<number, LivePresence>
+  >({});
+
+  const allUsers = useMemo(() => {
+    return roster.map((user) => {
+      const live = liveUsers[user.id];
+
+      if (!live) {
+        return {
+          ...user,
+          online: false,
+        };
+      }
+
+      return {
+        ...user,
+        room: live.room,
+        status: live.status,
+        online: true,
+      };
+    });
+  }, [roster, liveUsers]);
+
   const onlineUsers = useMemo(() => {
   return allUsers.filter(
     (user) => user.online !== false
@@ -96,27 +152,97 @@ function showNotification(
 
   setMounted(true);
 
+  const socket =
+  getSocket();
+
   const user =
-    getSessionUser();
+  getSessionUser();
 
-  if (!user) {
-    router.push("/");
-    return;
-  }
+if (!user) {
+  router.push("/");
+  return;
+}
 
-  setCurrentUserId(user.id);
+fetch("/api/users")
+  .then((res) => res.json())
+  .then((users) => {
+    setRoster(
+      users as UserItem[]
+    );
+  })
+  .catch((error) => {
+    console.error(
+      "Erro ao carregar usuários:",
+      error
+    );
+  });
 
   const savedStatus =
     localStorage.getItem("status");
 
-  if (
+  const initialStatus =
     savedStatus === "Disponivel" ||
     savedStatus === "Ausente" ||
     savedStatus === "Reuniao"
-  ) {
-    setStatus(savedStatus);
-  }
+      ? savedStatus
+      : "Disponivel";
 
+socket.emit(
+  "user-connected",
+  {
+    id: user.id,
+    nome: user.nome,
+    room: currentRoom,
+    status: initialStatus,
+    token: getSessionToken(),
+  }
+);
+
+socket.on(
+  "connect",
+  () => {
+    console.log(
+      "Socket conectado:",
+      socket.id
+    );
+  }
+);
+
+socket.on(
+  "presence-update",
+  (users: Array<{
+    id: number;
+    room: string;
+    status?: LivePresence["status"];
+  }>) => {
+
+    const map: Record<
+      number,
+      LivePresence
+    > = {};
+
+    users.forEach((liveUser) => {
+      map[liveUser.id] = {
+        room: liveUser.room,
+        status: liveUser.status,
+      };
+    });
+
+    setLiveUsers(map);
+
+  }
+);
+
+setCurrentUserId(
+  user.id
+);
+
+  setStatus(initialStatus);
+
+  // Conecta o socket uma única vez, no valor de currentRoom no momento da
+  // montagem — incluir currentRoom nas deps re-registraria os listeners do
+  // socket a cada troca de sala, duplicando-os.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [router]);
 
   useEffect(() => {
@@ -129,6 +255,92 @@ function showNotification(
     );
 
   }, [status, mounted]);
+
+  useEffect(() => {
+
+    if (!mounted || !currentUserId) return;
+
+    const socket = getSocket();
+
+    socket.emit(
+      "status-change",
+      {
+        userId: currentUserId,
+        status,
+      }
+    );
+
+  }, [status, currentUserId, mounted]);
+
+  useEffect(() => {
+
+  const updateActivity = () => {
+
+    setLastActivity(Date.now());
+
+    setStatus((current) => {
+
+      if (current === "Reuniao") {
+        return current;
+      }
+
+      return "Disponivel";
+    });
+  };
+
+  window.addEventListener(
+    "mousemove",
+    updateActivity
+  );
+
+  window.addEventListener(
+    "keydown",
+    updateActivity
+  );
+
+  return () => {
+
+    window.removeEventListener(
+      "mousemove",
+      updateActivity
+    );
+
+    window.removeEventListener(
+      "keydown",
+      updateActivity
+    );
+  };
+
+}, []);
+
+useEffect(() => {
+
+  const interval = setInterval(() => {
+
+    const inactiveTime =
+      Date.now() - lastActivity;
+
+    if (
+      inactiveTime >
+      2 * 60 * 1000
+    ) {
+
+      setStatus((current) => {
+
+        if (current === "Reuniao") {
+          return current;
+        }
+
+        return "Ausente";
+      });
+    }
+
+  }, 10000);
+
+  return () =>
+    clearInterval(interval);
+
+}, [lastActivity]);
 
   if (!mounted) {
     return null;
@@ -164,6 +376,7 @@ function showNotification(
 
         <Sidebar
   currentRoom={currentRoom}
+  users={allUsers}
   onRoomChange={moveToRoom}
 />
 
@@ -318,6 +531,7 @@ function showNotification(
 <RoomView
   room={currentRoom}
   users={onlineUsers}
+  currentUserId={currentUserId ?? 0}
   onUserClick={(name) =>
     showNotification(
       `Você chamou ${name}`

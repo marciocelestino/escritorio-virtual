@@ -3,27 +3,27 @@
     "id": 1,
     "nome": "Marcio Celestino",
     "email": "marcio@internit.com.br",
-    "senha": "internit123",
     "status": "Disponivel",
     "online": true,
-    "room": "Recepção"
+    "room": "Recepção",
+    "senhaHash": "$2b$10$o6wciBPak47n7wUVT7qJvueY6VVUDMHNbSUiALy.fSNveDqTdVS7u"
   },
   {
     "id": 2,
     "nome": "João Silva",
     "email": "joao@internit.com.br",
-    "senha": "123456",
     "status": "Disponivel",
     "online": true,
-    "room": "Sala de Reunião"
+    "room": "Sala de Reunião",
+    "senhaHash": "$2b$10$dOk49E3tqddWwcRJnB4v9.zWHxdlVlXFnayQI5WlCU7WpD7ItenWK"
   },
   {
     "id": 3,
     "nome": "Maria Souza",
     "email": "maria@internit.com.br",
-    "senha": "123456",
     "status": "Ausente",
     "online": true,
-    "room": "Espaço Natureza"
+    "room": "Espaço Natureza",
+    "senhaHash": "$2b$10$2kMO6y/44830WOgk693.0.u5B4OPlOl8yYg0ra1rZDl/YOBNpCp8S"
   }
 ]

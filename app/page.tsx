@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -33,6 +34,11 @@ export default function LoginPage() {
       JSON.stringify(data.user)
     );
 
+    localStorage.setItem(
+      "token",
+      data.token
+    );
+
     router.push("/office");
   };
 
@@ -40,10 +46,12 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-slate-100">
       <div className="w-[420px] rounded-2xl bg-white p-8 shadow-lg">
         <div className="mb-6 text-center">
-          <img
+          <Image
             src="/logo.png"
             alt="Internit"
-            className="mx-auto mb-4 h-16"
+            width={200}
+            height={70}
+            className="mx-auto mb-4 h-16 w-auto"
           />
 
           <h1 className="text-2xl font-bold">
