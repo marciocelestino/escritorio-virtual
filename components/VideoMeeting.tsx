@@ -23,6 +23,10 @@ type IceCandidatePayload = {
   candidate: RTCIceCandidateInit;
 };
 
+type Props = {
+  room: string;
+};
+
 const ICE_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
 ];
@@ -55,12 +59,39 @@ function RemoteVideo({
   );
 }
 
-export default function VideoMeeting() {
+function replaceOutgoingVideoTrack(
+  peers: Map<string, RTCPeerConnection>,
+  track: MediaStreamTrack | null
+) {
+
+  if (!track) {
+    return;
+  }
+
+  peers.forEach((peer) => {
+
+    const sender = peer
+      .getSenders()
+      .find(
+        (s) => s.track?.kind === "video"
+      );
+
+    sender?.replaceTrack(track);
+
+  });
+}
+
+export default function VideoMeeting({
+  room,
+}: Props) {
 
   const videoRef =
     useRef<HTMLVideoElement>(null);
 
   const localStreamRef =
+    useRef<MediaStream | null>(null);
+
+  const screenStreamRef =
     useRef<MediaStream | null>(null);
 
   const peersRef =
@@ -75,6 +106,15 @@ export default function VideoMeeting() {
     useState<MediaStream | null>(
       null
     );
+
+  const [cameraOn, setCameraOn] =
+    useState(true);
+
+  const [micOn, setMicOn] =
+    useState(true);
+
+  const [sharingScreen, setSharingScreen] =
+    useState(false);
 
   const [
     remoteStreams,
@@ -162,41 +202,22 @@ export default function VideoMeeting() {
     return peer;
   }
 
-  async function joinMeeting() {
+  function stopAllTracks() {
 
-    try {
-
-      const mediaStream =
-        await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        });
-
-      localStreamRef.current =
-        mediaStream;
-
-      setStream(mediaStream);
-
-      setJoined(true);
-
-      const socket =
-        getSocket();
-
-      socket.emit(
-        "join-meeting"
+    localStreamRef.current
+      ?.getTracks()
+      .forEach((track) =>
+        track.stop()
       );
 
-    } catch (error) {
-
-      console.error(
-        "Erro ao acessar câmera:",
-        error
+    screenStreamRef.current
+      ?.getTracks()
+      .forEach((track) =>
+        track.stop()
       );
 
-      alert(
-        "Não foi possível acessar câmera ou microfone."
-      );
-    }
+    localStreamRef.current = null;
+    screenStreamRef.current = null;
   }
 
   function leaveMeeting() {
@@ -213,17 +234,150 @@ export default function VideoMeeting() {
 
     setRemoteStreams({});
 
-    localStreamRef.current
+    stopAllTracks();
+
+    setStream(null);
+    setJoined(false);
+    setSharingScreen(false);
+    setCameraOn(true);
+    setMicOn(true);
+  }
+
+  async function joinMeeting() {
+
+    try {
+
+      const mediaStream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
+        });
+
+      localStreamRef.current =
+        mediaStream;
+
+      setStream(mediaStream);
+      setCameraOn(true);
+      setMicOn(true);
+      setJoined(true);
+
+      const socket =
+        getSocket();
+
+      socket.emit(
+        "join-meeting",
+        { room }
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Erro ao acessar câmera:",
+        error
+      );
+
+      alert(
+        "Não foi possível acessar câmera ou microfone."
+      );
+    }
+  }
+
+  function toggleCamera() {
+
+    const track =
+      localStreamRef.current
+        ?.getVideoTracks()[0];
+
+    if (!track) {
+      return;
+    }
+
+    track.enabled = !track.enabled;
+
+    setCameraOn(track.enabled);
+  }
+
+  function toggleMic() {
+
+    const track =
+      localStreamRef.current
+        ?.getAudioTracks()[0];
+
+    if (!track) {
+      return;
+    }
+
+    track.enabled = !track.enabled;
+
+    setMicOn(track.enabled);
+  }
+
+  async function startScreenShare() {
+
+    try {
+
+      const screenStream =
+        await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+        });
+
+      const screenTrack =
+        screenStream.getVideoTracks()[0];
+
+      screenStreamRef.current =
+        screenStream;
+
+      replaceOutgoingVideoTrack(
+        peersRef.current,
+        screenTrack
+      );
+
+      screenTrack.onended = () => {
+        stopScreenShare();
+      };
+
+      setSharingScreen(true);
+
+    } catch (error) {
+
+      console.error(
+        "Erro ao compartilhar tela:",
+        error
+      );
+
+    }
+  }
+
+  function stopScreenShare() {
+
+    const cameraTrack =
+      localStreamRef.current
+        ?.getVideoTracks()[0] ??
+      null;
+
+    replaceOutgoingVideoTrack(
+      peersRef.current,
+      cameraTrack
+    );
+
+    screenStreamRef.current
       ?.getTracks()
       .forEach((track) =>
         track.stop()
       );
 
-    localStreamRef.current = null;
+    screenStreamRef.current = null;
 
-    setStream(null);
+    setSharingScreen(false);
+  }
 
-    setJoined(false);
+  function toggleScreenShare() {
+
+    if (sharingScreen) {
+      stopScreenShare();
+    } else {
+      startScreenShare();
+    }
   }
 
   useEffect(() => {
@@ -239,6 +393,17 @@ export default function VideoMeeting() {
     }
 
   }, [stream]);
+
+  // Sai da chamada ao trocar de sala ou ao desmontar — sem isso a câmera
+  // ficaria ligada e a conexão permaneceria aberta na sala anterior.
+  useEffect(() => {
+
+    return () => {
+      leaveMeeting();
+    };
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [room]);
 
   useEffect(() => {
 
@@ -452,7 +617,7 @@ export default function VideoMeeting() {
           font-semibold
         "
       >
-        Sala de Reunião
+        Chamada de voz e vídeo
       </h3>
 
       {!joined && (
@@ -467,7 +632,7 @@ export default function VideoMeeting() {
             text-white
           "
         >
-          Entrar na Reunião
+          Entrar na Chamada
         </button>
 
       )}
@@ -495,6 +660,8 @@ export default function VideoMeeting() {
                 "
               >
                 Sua câmera
+                {sharingScreen &&
+                  " (compartilhando tela)"}
               </p>
 
               <video
@@ -538,19 +705,83 @@ export default function VideoMeeting() {
 
           </div>
 
-          <button
-            onClick={leaveMeeting}
+          <div
             className="
               mt-4
-              rounded-lg
-              bg-slate-200
-              px-4
-              py-2
-              text-slate-800
+              flex
+              flex-wrap
+              gap-2
             "
           >
-            Sair da Reunião
-          </button>
+
+            <button
+              onClick={toggleCamera}
+              className={`
+                rounded-lg
+                px-4
+                py-2
+                ${
+                  cameraOn
+                    ? "bg-slate-200 text-slate-800"
+                    : "bg-red-100 text-red-700"
+                }
+              `}
+            >
+              {cameraOn
+                ? "📷 Desligar câmera"
+                : "📷 Ligar câmera"}
+            </button>
+
+            <button
+              onClick={toggleMic}
+              className={`
+                rounded-lg
+                px-4
+                py-2
+                ${
+                  micOn
+                    ? "bg-slate-200 text-slate-800"
+                    : "bg-red-100 text-red-700"
+                }
+              `}
+            >
+              {micOn
+                ? "🎙️ Desligar microfone"
+                : "🎙️ Ligar microfone"}
+            </button>
+
+            <button
+              onClick={toggleScreenShare}
+              className={`
+                rounded-lg
+                px-4
+                py-2
+                ${
+                  sharingScreen
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-slate-200 text-slate-800"
+                }
+              `}
+            >
+              {sharingScreen
+                ? "🖥️ Parar compartilhamento"
+                : "🖥️ Compartilhar tela"}
+            </button>
+
+            <button
+              onClick={leaveMeeting}
+              className="
+                rounded-lg
+                bg-red-600
+                px-4
+                py-2
+                text-white
+              "
+            >
+              Sair da Chamada
+            </button>
+
+          </div>
 
         </div>
 

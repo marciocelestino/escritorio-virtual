@@ -50,7 +50,7 @@ if (room === "Sala de Reunião") {
         onUserClick={onUserClick}
       />
 
-      <VideoMeeting />
+      <VideoMeeting room={room} />
     </>
   );
 }
@@ -66,11 +66,15 @@ if (room === "Sala de Reunião") {
   }
 
   return (
+    <>
       <UserOfficeRoom
         room={room}
         users={roomUsers}
         currentUserId={currentUserId}
         onUserClick={onUserClick}
       />
+
+      <VideoMeeting room={room} />
+    </>
   );
 }

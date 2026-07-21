@@ -1,8 +1,10 @@
 "use client";
 
-import rooms from "@/data/salas.json";
+import { buildRoomList } from "@/lib/rooms";
 
 type SidebarUser = {
+  id: number;
+  nome: string;
   room: string;
   online?: boolean;
 };
@@ -18,6 +20,8 @@ export default function Sidebar({
   users,
   onRoomChange,
 }: Props) {
+
+  const rooms = buildRoomList(users);
 
   function getIcon(
     roomName: string

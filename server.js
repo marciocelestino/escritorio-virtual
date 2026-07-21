@@ -73,6 +73,23 @@ app.prepare().then(() => {
 
   const onlineUsers = {};
   const socketUsers = new Map();
+  const socketCallRoom = new Map();
+
+  function leaveCurrentCall(socket) {
+    const callKey = socketCallRoom.get(socket.id);
+
+    if (!callKey) {
+      return;
+    }
+
+    socket.leave(callKey);
+
+    socket.to(callKey).emit("user-left-meeting", {
+      socketId: socket.id,
+    });
+
+    socketCallRoom.delete(socket.id);
+  }
 
   io.on("connection", (socket) => {
     socket.on("user-connected", (user) => {
@@ -133,37 +150,43 @@ app.prepare().then(() => {
       }
     });
 
-    // Sinalização WebRTC em malha: cada par de participantes negocia sua
-    // própria conexão, endereçada pelo socket id de destino (`to`), em vez
-    // de transmitir para toda a sala — permite mais de 2 participantes.
-    socket.on("join-meeting", () => {
+    // Sinalização WebRTC em malha, isolada por sala do escritório: cada
+    // par de participantes negocia sua própria conexão, endereçada pelo
+    // socket id de destino (`to`), em vez de transmitir para toda a sala
+    // — permite mais de 2 participantes por chamada.
+    socket.on("join-meeting", ({ room }) => {
+      if (!room) {
+        return;
+      }
+
+      leaveCurrentCall(socket);
+
+      const callKey = `call:${room}`;
+
       const existingRoom =
-        io.sockets.adapter.rooms.get("meeting-room");
+        io.sockets.adapter.rooms.get(callKey);
 
       const existingParticipants = existingRoom
         ? Array.from(existingRoom)
         : [];
 
-      socket.join("meeting-room");
+      socket.join(callKey);
+      socketCallRoom.set(socket.id, callKey);
 
       socket.emit(
         "existing-participants",
         existingParticipants
       );
 
-      socket.to("meeting-room").emit("user-joined-meeting", {
+      socket.to(callKey).emit("user-joined-meeting", {
         socketId: socket.id,
       });
 
-      console.log("Entrou na reunião:", socket.id);
+      console.log("Entrou na chamada:", room, socket.id);
     });
 
     socket.on("leave-meeting", () => {
-      socket.leave("meeting-room");
-
-      socket.to("meeting-room").emit("user-left-meeting", {
-        socketId: socket.id,
-      });
+      leaveCurrentCall(socket);
     });
 
     socket.on("offer", ({ to, offer }) => {
@@ -179,11 +202,7 @@ app.prepare().then(() => {
     });
 
     socket.on("disconnecting", () => {
-      if (socket.rooms.has("meeting-room")) {
-        socket.to("meeting-room").emit("user-left-meeting", {
-          socketId: socket.id,
-        });
-      }
+      leaveCurrentCall(socket);
     });
 
     socket.on("disconnect", () => {
