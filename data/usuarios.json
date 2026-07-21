@@ -25,5 +25,41 @@
     "online": true,
     "room": "Espaço Natureza",
     "senhaHash": "$2b$10$2kMO6y/44830WOgk693.0.u5B4OPlOl8yYg0ra1rZDl/YOBNpCp8S"
+  },
+  {
+    "id": 4,
+    "nome": "Luiz Henrique",
+    "email": "luiz@internit.com.br",
+    "status": "Disponivel",
+    "online": true,
+    "room": "Recepção",
+    "senhaHash": "$2b$10$GK3.3q./c9yUBzd/1CZmZuXyYrecv.60H3H4lr4yqv.4BD0ygyOEa"
+  },
+  {
+    "id": 5,
+    "nome": "Ingrid Santos",
+    "email": "ingrid@internit.com.br",
+    "status": "Disponivel",
+    "online": true,
+    "room": "Recepção",
+    "senhaHash": "$2b$10$0U3QXZJGhTT9o4Uk0A0/huVf/wUs3uwDwO.seIGooCYCvO6/nTWtm"
+  },
+  {
+    "id": 6,
+    "nome": "Sávio Pìres",
+    "email": "savio@internit.com.br",
+    "status": "Disponivel",
+    "online": true,
+    "room": "Recepção",
+    "senhaHash": "$2b$10$JS/XCsVsTsJ57Hd8mYchQ.V/r7JWUbnHNd8/Rcq0sFzB1DeR0rq.K"
+  },
+  {
+    "id": 7,
+    "nome": "Davi Pizão",
+    "email": "davi@internit.com.br",
+    "status": "Disponivel",
+    "online": true,
+    "room": "Recepção",
+    "senhaHash": "$2b$10$MyfJx9koWcD0MgDB7XFNK.CQ0FAIEhaGVPSqpxDeR.WrpJyl23RwW"
   }
 ]
