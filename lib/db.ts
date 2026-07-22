@@ -243,6 +243,7 @@ export function updateUser(
     salaNome: string | null;
     avatarTipo: string | null;
     avatarValor: string | null;
+    isAdmin: boolean;
   }>
 ): DbUser | null {
 
@@ -270,4 +271,31 @@ export function updateUser(
   persistUsers();
 
   return users[index];
+}
+
+export function countAdmins(): number {
+  return loadUsers().filter(
+    (user) => user.isAdmin
+  ).length;
+}
+
+export function deleteUser(
+  id: number
+): boolean {
+
+  const users = loadUsers();
+
+  const index = users.findIndex(
+    (user) => user.id === id
+  );
+
+  if (index === -1) {
+    return false;
+  }
+
+  users.splice(index, 1);
+
+  persistUsers();
+
+  return true;
 }

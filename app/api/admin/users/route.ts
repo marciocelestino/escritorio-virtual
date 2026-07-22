@@ -4,6 +4,9 @@ import {
   getAllUsers,
   getUserById,
   createUser,
+  updateUser,
+  deleteUser,
+  countAdmins,
   emailInUseByAnotherUser,
 } from "@/lib/db";
 import { getVerifiedUserId } from "@/lib/authToken";
@@ -98,5 +101,130 @@ export async function POST(req: Request) {
       nome: created.nome,
       email: created.email,
     },
+  });
+}
+
+export async function PATCH(req: Request) {
+  const body = await req.json();
+
+  const admin = requireAdmin(body.token);
+
+  if (!admin) {
+    return NextResponse.json(
+      { success: false, error: "Acesso negado." },
+      { status: 403 }
+    );
+  }
+
+  const targetId = Number(body.userId);
+  const target = getUserById(targetId);
+
+  if (!target) {
+    return NextResponse.json(
+      { success: false, error: "Usuário não encontrado." },
+      { status: 404 }
+    );
+  }
+
+  const wantsAdmin = Boolean(body.isAdmin);
+
+  if (
+    target.isAdmin &&
+    !wantsAdmin &&
+    targetId === admin.id
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Você não pode remover sua própria permissão de administrador.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (
+    target.isAdmin &&
+    !wantsAdmin &&
+    countAdmins() <= 1
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Precisa existir pelo menos um administrador.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const updated = updateUser(targetId, {
+    isAdmin: wantsAdmin,
+  });
+
+  return NextResponse.json({
+    success: true,
+    user: updated
+      ? {
+          id: updated.id,
+          nome: updated.nome,
+          email: updated.email,
+          isAdmin: updated.isAdmin,
+        }
+      : null,
+  });
+}
+
+export async function DELETE(req: Request) {
+  const body = await req.json();
+
+  const admin = requireAdmin(body.token);
+
+  if (!admin) {
+    return NextResponse.json(
+      { success: false, error: "Acesso negado." },
+      { status: 403 }
+    );
+  }
+
+  const targetId = Number(body.userId);
+  const target = getUserById(targetId);
+
+  if (!target) {
+    return NextResponse.json(
+      { success: false, error: "Usuário não encontrado." },
+      { status: 404 }
+    );
+  }
+
+  if (targetId === admin.id) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Você não pode excluir sua própria conta.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (
+    target.isAdmin &&
+    countAdmins() <= 1
+  ) {
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Precisa existir pelo menos um administrador.",
+      },
+      { status: 400 }
+    );
+  }
+
+  deleteUser(targetId);
+
+  return NextResponse.json({
+    success: true,
   });
 }

@@ -20,6 +20,8 @@ export default function AdminPage() {
 
   const [mounted, setMounted] = useState(false);
   const [allowed, setAllowed] = useState(false);
+  const [currentUserId, setCurrentUserId] =
+    useState<number | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [erro, setErro] = useState("");
   const [sucesso, setSucesso] = useState("");
@@ -66,11 +68,91 @@ export default function AdminPage() {
       return;
     }
 
+    setCurrentUserId(user.id);
     setAllowed(true);
 
     loadUsers();
 
   }, [router]);
+
+  async function handleToggleAdmin(
+    user: AdminUser
+  ) {
+
+    setErro("");
+    setSucesso("");
+
+    const response = await fetch(
+      "/api/admin/users",
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: getSessionToken(),
+          userId: user.id,
+          isAdmin: !user.isAdmin,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!data.success) {
+      setErro(
+        data.error ||
+          "Não foi possível alterar a permissão."
+      );
+      return;
+    }
+
+    loadUsers();
+  }
+
+  async function handleDelete(
+    user: AdminUser
+  ) {
+
+    if (
+      !confirm(
+        `Tem certeza que quer excluir "${user.nome}"? Essa ação não pode ser desfeita.`
+      )
+    ) {
+      return;
+    }
+
+    setErro("");
+    setSucesso("");
+
+    const response = await fetch(
+      "/api/admin/users",
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          token: getSessionToken(),
+          userId: user.id,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    if (!data.success) {
+      setErro(
+        data.error ||
+          "Não foi possível excluir o usuário."
+      );
+      return;
+    }
+
+    setSucesso(`Usuário "${user.nome}" excluído.`);
+
+    loadUsers();
+  }
 
   async function handleCreate(
     e: React.FormEvent
@@ -228,28 +310,68 @@ export default function AdminPage() {
           </h2>
 
           <div className="divide-y">
-            {users.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between py-2"
-              >
-                <div>
-                  <div className="font-medium text-slate-900">
-                    {user.nome}
+            {users.map((user) => {
+
+              const isSelf =
+                user.id === currentUserId;
+
+              return (
+                <div
+                  key={user.id}
+                  className="flex items-center justify-between gap-3 py-2"
+                >
+                  <div>
+                    <div className="font-medium text-slate-900">
+                      {user.nome}
+                      {isSelf && (
+                        <span className="ml-2 text-xs text-slate-400">
+                          (você)
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="text-sm text-slate-500">
+                      {user.email}
+                    </div>
                   </div>
 
-                  <div className="text-sm text-slate-500">
-                    {user.email}
+                  <div className="flex items-center gap-2">
+
+                    {user.isAdmin && (
+                      <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
+                        Admin
+                      </span>
+                    )}
+
+                    <button
+                      onClick={() =>
+                        handleToggleAdmin(user)
+                      }
+                      disabled={
+                        isSelf && user.isAdmin
+                      }
+                      className="rounded-lg bg-slate-100 px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {user.isAdmin
+                        ? "Remover admin"
+                        : "Tornar admin"}
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        handleDelete(user)
+                      }
+                      disabled={isSelf}
+                      className="rounded-lg bg-red-50 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Excluir
+                    </button>
+
                   </div>
                 </div>
+              );
 
-                {user.isAdmin && (
-                  <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
-                    Admin
-                  </span>
-                )}
-              </div>
-            ))}
+            })}
           </div>
         </div>
 

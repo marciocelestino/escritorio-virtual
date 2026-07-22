@@ -3,6 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  color-scheme: light;
 }
 
 @theme inline {
@@ -12,12 +13,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Esta interface foi desenhada só para tema claro (cards brancos, texto
+   escuro). O bloco @media (prefers-color-scheme: dark) que vinha do
+   create-next-app trocava o texto para quase-branco quando o sistema
+   operacional estava em modo escuro, deixando campos e itens de lista
+   ilegíveis (texto claro sobre fundo claro) — por isso foi removido. */
 
 body {
   background: var(--background);
