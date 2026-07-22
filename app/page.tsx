@@ -10,6 +10,26 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
 
+  const [
+    mostrarEsqueciSenha,
+    setMostrarEsqueciSenha,
+  ] = useState(false);
+
+  const [
+    emailRecuperacao,
+    setEmailRecuperacao,
+  ] = useState("");
+
+  const [
+    enviandoRecuperacao,
+    setEnviandoRecuperacao,
+  ] = useState(false);
+
+  const [
+    mensagemRecuperacao,
+    setMensagemRecuperacao,
+  ] = useState("");
+
   const login = async () => {
     const response = await fetch("/api/login", {
       method: "POST",
@@ -40,6 +60,28 @@ export default function LoginPage() {
     );
 
     router.push("/office");
+  };
+
+  const enviarRecuperacao = async () => {
+
+    setEnviandoRecuperacao(true);
+    setMensagemRecuperacao("");
+
+    await fetch("/api/esqueci-senha", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        email: emailRecuperacao,
+      }),
+    });
+
+    setEnviandoRecuperacao(false);
+
+    setMensagemRecuperacao(
+      "Se esse e-mail estiver cadastrado, uma nova senha foi enviada para ele."
+    );
   };
 
   return (
@@ -112,6 +154,99 @@ export default function LoginPage() {
         >
           Entrar
         </button>
+
+        {!mostrarEsqueciSenha && (
+
+          <button
+            onClick={() => {
+              setMostrarEsqueciSenha(true);
+              setMensagemRecuperacao("");
+            }}
+            className="mt-4 w-full text-center text-sm text-blue-600 hover:underline"
+          >
+            Esqueci minha senha
+          </button>
+
+        )}
+
+        {mostrarEsqueciSenha && (
+
+          <div className="mt-4 border-t border-slate-200 pt-4">
+
+            <p className="mb-2 text-sm text-slate-600">
+              Informe seu e-mail — se ele estiver
+              cadastrado, enviamos uma nova senha
+              para você.
+            </p>
+
+            <input
+              type="email"
+              placeholder="Seu e-mail"
+              value={emailRecuperacao}
+              onChange={(e) =>
+                setEmailRecuperacao(
+                  e.target.value
+                )
+              }
+              className="
+                mb-3
+                w-full
+                rounded-lg
+                border
+                border-slate-300
+                bg-white
+                p-2
+                text-slate-900
+                placeholder:text-slate-400
+              "
+            />
+
+            <div className="flex gap-2">
+
+              <button
+                onClick={enviarRecuperacao}
+                disabled={
+                  enviandoRecuperacao ||
+                  !emailRecuperacao
+                }
+                className="
+                  flex-1
+                  rounded-lg
+                  bg-slate-800
+                  p-2
+                  text-sm
+                  text-white
+                  hover:bg-slate-900
+                  disabled:opacity-60
+                "
+              >
+                {enviandoRecuperacao
+                  ? "Enviando..."
+                  : "Enviar nova senha"}
+              </button>
+
+              <button
+                onClick={() => {
+                  setMostrarEsqueciSenha(false);
+                  setMensagemRecuperacao("");
+                }}
+                className="rounded-lg bg-slate-100 p-2 text-sm text-slate-700 hover:bg-slate-200"
+              >
+                Cancelar
+              </button>
+
+            </div>
+
+            {mensagemRecuperacao && (
+              <p className="mt-3 text-sm text-green-700">
+                {mensagemRecuperacao}
+              </p>
+            )}
+
+          </div>
+
+        )}
+
       </div>
     </main>
   );

@@ -10,6 +10,7 @@ import {
   emailInUseByAnotherUser,
 } from "@/lib/db";
 import { getVerifiedUserId } from "@/lib/authToken";
+import { sendEmail } from "@/lib/email";
 
 function requireAdmin(token: unknown) {
 
@@ -92,6 +93,23 @@ export async function POST(req: Request) {
     nome,
     email,
     senhaHash,
+  });
+
+  const siteUrl = new URL(req.url).origin;
+
+  await sendEmail({
+    to: created.email,
+    subject: "Seu acesso ao Internit Office",
+    html: `
+      <p>Olá, ${created.nome}!</p>
+      <p>Sua conta no Internit Office foi criada. Dados de acesso:</p>
+      <p>
+        Link: <a href="${siteUrl}">${siteUrl}</a><br/>
+        E-mail: ${created.email}<br/>
+        Senha: ${senha}
+      </p>
+      <p>Recomendamos trocar essa senha assim que entrar, em "Meus Dados".</p>
+    `,
   });
 
   return NextResponse.json({
