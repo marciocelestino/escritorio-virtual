@@ -605,6 +605,15 @@ useEffect(() => {
       someoneElseWithOpenDoor
   );
 
+  const myself = allUsers.find(
+    (user) => user.id === currentUserId
+  );
+
+  const viewingDifferentRoom = Boolean(
+    callRoom !== null &&
+      callRoom !== currentRoom
+  );
+
   return (
 
     <main className="flex h-screen flex-col bg-slate-100">
@@ -917,9 +926,11 @@ useEffect(() => {
                 modo escuro,
                 gravação de reuniões,
                 cargos e salas restritas por equipe,
+                mover/redimensionar o dock da chamada,
+                selo de mutado também pro próprio usuário,
                 e melhorias na chamada de vídeo
                 (avatar com a câmera desligada,
-                indicador de quem está falando,
+                remover usuário da chamada,
                 compartilhamento de tela aprimorado).
               </p>
 
@@ -1153,6 +1164,17 @@ useEffect(() => {
           onLeft={() =>
             setCallRoom(null)
           }
+          myNome={myself?.nome}
+          myAvatarTipo={myself?.avatarTipo}
+          myAvatarValor={myself?.avatarValor}
+          viewingDifferentRoom={
+            viewingDifferentRoom
+          }
+          onGoToCallRoom={() => {
+            if (callRoom) {
+              moveToRoom(callRoom);
+            }
+          }}
         />
 
       )}

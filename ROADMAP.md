@@ -14,20 +14,40 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
 - Nome real do participante na chamada (no lugar de "Participante"),
   recuperação automática de conexão de vídeo quando a rede cai, e
   recolher/expandir as listas de Salas e Usuários.
+- **Indicar se o microfone de alguém já está mutado**: selo 🔇 visível no
+  card de vídeo de quem está mutado, pros outros participantes.
+- **Indicador de quem está falando**: aro verde no vídeo de quem está com
+  a voz ativa, via `AnalyserNode` da Web Audio API.
+- **Recolher a barra lateral de verdade**: Salas e Usuários encolhem para
+  um trilho fino de ícones (com contagem), liberando espaço pra área
+  central.
+- **Pulso do escritório**: tira no topo com a contagem de gente em cada
+  sala, clicável pra pular direto pra ela.
+- **Piso ilustrado nas salas**: porta, sofás, plantas, mesas, monitores,
+  árvores e lago desenhados em CSS no lugar dos emojis de decoração.
+- **Dock de chamada flutuante persistente**: a chamada fica presa à sala
+  onde você entrou (não à sala que está sendo vista), num dock fixo no
+  canto da tela — dá pra navegar por outras salas sem cair da chamada.
+- **Lugares fixos clicáveis**: cada sala tem assentos numerados de
+  verdade; clicar num lugar vazio move o avatar pra lá, sincronizado
+  pelo servidor (auto-atribuído ao entrar na sala, liberado ao sair).
 
 ## Ainda por fazer
 
 ### Ajustes rápidos em recursos existentes
 
-- **Indicar se o microfone de alguém já está mutado**: o botão "Mutar"
-  hoje não mostra se a pessoa já está muda ou não.
 - **Mostrar avatar quando a câmera está desligada**: hoje aparece só a
   caixa cinza "Câmera desligada" — dá pra mostrar o avatar (foto/emoji)
   da pessoa no lugar, já que o Meus Dados já guarda isso.
-- **Recolher a barra lateral de verdade**: hoje o botão ▾/▸ só esconde a
-  lista, mas o espaço da barra (Salas/Usuários) continua reservado —
-  o ideal é encolher a barra pra um trilho fino na lateral, liberando
-  espaço pra área central.
+- **Botão "voltar pra chamada"**: quando o dock está tocando uma chamada
+  de uma sala diferente da que você está vendo, um atalho rápido pra
+  navegar de volta até ela.
+- **Selo de "mutado" também pro próprio usuário**: hoje o selo 🔇 só
+  aparece pros outros participantes verem que você está mutado — o seu
+  próprio card na chamada não mostra isso.
+- **Mover e redimensionar o dock da chamada**: hoje ele é fixo no canto
+  inferior direito com tamanho fixo — dá pra arrastar pra outro canto e
+  ajustar o tamanho, e lembrar a posição/tamanho escolhido.
 
 ### Controles de chamada
 
@@ -40,9 +60,6 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   `getUserMedia({ audio: { deviceId } })`; troca de alto-falante depende
   de `setSinkId`, que hoje só funciona em navegadores baseados em
   Chromium).
-- **Indicador de quem está falando**: detectar volume de áudio de cada
-  participante (`AnalyserNode` da Web Audio API) e destacar visualmente
-  o card de quem está com a voz ativa.
 - **Plano de fundo da câmera** (tipo Google Meet): borrar ou trocar o
   fundo da própria câmera. Normalmente feito com segmentação de pessoa
   em tempo real (ex.: bibliotecas de segmentação corporal) desenhando

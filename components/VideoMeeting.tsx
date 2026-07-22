@@ -29,6 +29,11 @@ type Props = {
   onNotify?: (message: string) => void;
   onJoined?: () => void;
   onLeft?: () => void;
+  myNome?: string;
+  myAvatarTipo?: string | null;
+  myAvatarValor?: string | null;
+  viewingDifferentRoom?: boolean;
+  onGoToCallRoom?: () => void;
 };
 
 const ICE_SERVERS = [
@@ -132,12 +137,108 @@ function VideoTile({
   );
 }
 
+function CameraOffAvatar({
+  nome,
+  avatarTipo,
+  avatarValor,
+  micMuted = false,
+}: {
+  nome?: string;
+  avatarTipo?: string | null;
+  avatarValor?: string | null;
+  micMuted?: boolean;
+}) {
+
+  const initials =
+    (nome ?? "")
+      .split(" ")
+      .slice(0, 2)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase() || "?";
+
+  return (
+    <div
+      className="
+        relative
+        flex
+        h-40
+        w-full
+        items-center
+        justify-center
+        rounded-xl
+        border
+        bg-slate-100
+      "
+    >
+
+      <div
+        className="
+          flex
+          h-16
+          w-16
+          items-center
+          justify-center
+          overflow-hidden
+          rounded-full
+          bg-blue-600
+          text-lg
+          font-bold
+          text-white
+          shadow-md
+        "
+      >
+
+        {avatarTipo === "foto" && avatarValor ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={avatarValor}
+            alt={nome ?? ""}
+            className="h-full w-full object-cover"
+          />
+        ) : avatarTipo === "emoji" && avatarValor ? (
+          <span className="text-3xl">
+            {avatarValor}
+          </span>
+        ) : (
+          initials
+        )}
+
+      </div>
+
+      {micMuted && (
+        <span
+          className="
+            absolute
+            bottom-2
+            left-2
+            rounded-full
+            bg-black/60
+            px-2
+            py-1
+            text-xs
+            text-white
+          "
+        >
+          🔇
+        </span>
+      )}
+
+    </div>
+  );
+}
+
 export default function VideoMeeting({
   room,
   autoJoin = false,
   onNotify,
   onJoined,
   onLeft,
+  myNome,
+  myAvatarTipo,
+  myAvatarValor,
+  viewingDifferentRoom = false,
+  onGoToCallRoom,
 }: Props) {
 
   const localStreamRef =
@@ -175,6 +276,20 @@ export default function VideoMeeting({
 
   const micOnRef =
     useRef(true);
+
+  // Arrastar/redimensionar o dock: null em dockPos significa "ainda não
+  // foi movido", usa a posição padrão via CSS (canto inferior direito).
+  const dockRef =
+    useRef<HTMLDivElement>(null);
+
+  const draggingRef =
+    useRef(false);
+
+  const resizingRef =
+    useRef(false);
+
+  const dragOffsetRef =
+    useRef({ x: 0, y: 0 });
 
   // Detecção de quem está falando: um AnalyserNode por participante (local
   // e remotos), nunca conectado ao destino de áudio — só lemos o volume,
@@ -245,6 +360,195 @@ export default function VideoMeeting({
 
   const [minimized, setMinimized] =
     useState(false);
+
+  const [dockPos, setDockPos] =
+    useState<{
+      x: number;
+      y: number;
+    } | null>(() => {
+
+      if (typeof window === "undefined") {
+        return null;
+      }
+
+      try {
+
+        const saved = localStorage.getItem(
+          "callDockPos"
+        );
+
+        return saved ? JSON.parse(saved) : null;
+
+      } catch {
+        return null;
+      }
+
+    });
+
+  const [dockSize, setDockSize] =
+    useState<{
+      width: number;
+      height: number;
+    }>(() => {
+
+      const fallback = {
+        width: 320,
+        height: 420,
+      };
+
+      if (typeof window === "undefined") {
+        return fallback;
+      }
+
+      try {
+
+        const saved = localStorage.getItem(
+          "callDockSize"
+        );
+
+        return saved
+          ? JSON.parse(saved)
+          : fallback;
+
+      } catch {
+        return fallback;
+      }
+
+    });
+
+  useEffect(() => {
+
+    if (dockPos) {
+      localStorage.setItem(
+        "callDockPos",
+        JSON.stringify(dockPos)
+      );
+    }
+
+  }, [dockPos]);
+
+  useEffect(() => {
+
+    localStorage.setItem(
+      "callDockSize",
+      JSON.stringify(dockSize)
+    );
+
+  }, [dockSize]);
+
+  useEffect(() => {
+
+    function handleMouseMove(
+      event: MouseEvent
+    ) {
+
+      if (draggingRef.current) {
+
+        setDockPos({
+          x:
+            event.clientX -
+            dragOffsetRef.current.x,
+          y:
+            event.clientY -
+            dragOffsetRef.current.y,
+        });
+
+      }
+
+      if (resizingRef.current) {
+
+        const rect =
+          dockRef.current?.getBoundingClientRect();
+
+        if (rect) {
+
+          setDockSize({
+            width: Math.min(
+              560,
+              Math.max(
+                260,
+                event.clientX - rect.left
+              )
+            ),
+            height: Math.min(
+              window.innerHeight - 40,
+              Math.max(
+                200,
+                event.clientY - rect.top
+              )
+            ),
+          });
+
+        }
+
+      }
+
+    }
+
+    function handleMouseUp() {
+      draggingRef.current = false;
+      resizingRef.current = false;
+    }
+
+    window.addEventListener(
+      "mousemove",
+      handleMouseMove
+    );
+
+    window.addEventListener(
+      "mouseup",
+      handleMouseUp
+    );
+
+    return () => {
+
+      window.removeEventListener(
+        "mousemove",
+        handleMouseMove
+      );
+
+      window.removeEventListener(
+        "mouseup",
+        handleMouseUp
+      );
+
+    };
+
+  }, []);
+
+  function handleDockHeaderMouseDown(
+    event: React.MouseEvent
+  ) {
+
+    const rect =
+      dockRef.current?.getBoundingClientRect();
+
+    if (!rect) {
+      return;
+    }
+
+    draggingRef.current = true;
+
+    dragOffsetRef.current = {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+
+    setDockPos({
+      x: rect.left,
+      y: rect.top,
+    });
+
+  }
+
+  function handleDockResizeMouseDown(
+    event: React.MouseEvent
+  ) {
+
+    event.stopPropagation();
+    resizingRef.current = true;
+
+  }
 
   function removePeer(
     remoteSocketId: string
@@ -1391,25 +1695,40 @@ export default function VideoMeeting({
     <>
 
     <div
-      className="
+      ref={dockRef}
+      className={`
         fixed
-        bottom-4
-        right-4
         z-40
-        w-80
-        max-h-[80vh]
         overflow-y-auto
         rounded-2xl
         border
         bg-white
         p-4
         shadow-xl
-      "
+        ${
+          dockPos
+            ? ""
+            : "bottom-4 right-4"
+        }
+      `}
+      style={{
+        width: `${dockSize.width}px`,
+        maxHeight: `${dockSize.height}px`,
+        ...(dockPos
+          ? {
+              left: `${dockPos.x}px`,
+              top: `${dockPos.y}px`,
+            }
+          : {}),
+      }}
     >
 
       <div
+        onMouseDown={handleDockHeaderMouseDown}
         className="
           flex
+          cursor-move
+          select-none
           items-center
           justify-between
           gap-2
@@ -1424,7 +1743,7 @@ export default function VideoMeeting({
             text-slate-900
           "
         >
-          🎥 {room}
+          ⠿ 🎥 {room}
         </h3>
 
         {joined && (
@@ -1432,6 +1751,9 @@ export default function VideoMeeting({
           <button
             onClick={() =>
               setMinimized((current) => !current)
+            }
+            onMouseDown={(e) =>
+              e.stopPropagation()
             }
             title={
               minimized
@@ -1451,6 +1773,23 @@ export default function VideoMeeting({
         )}
 
       </div>
+
+      {viewingDifferentRoom &&
+        onGoToCallRoom && (
+
+          <button
+            onClick={onGoToCallRoom}
+            className="
+              mt-1
+              text-xs
+              text-blue-600
+              hover:underline
+            "
+          >
+            ↩️ Voltar pra sala da chamada
+          </button>
+
+        )}
 
       {!joined && autoJoin && (
 
@@ -1535,6 +1874,7 @@ export default function VideoMeeting({
                   speaking={speakingIds.has(
                     "local"
                   )}
+                  micMuted={!micOn}
                   onClick={() =>
                     toggleExpanded("local")
                   }
@@ -1542,23 +1882,12 @@ export default function VideoMeeting({
 
               ) : (
 
-                <div
-                  className="
-                    flex
-                    h-40
-                    w-full
-                    max-w-md
-                    items-center
-                    justify-center
-                    rounded-xl
-                    border
-                    bg-slate-100
-                    text-sm
-                    text-slate-500
-                  "
-                >
-                  Câmera desligada
-                </div>
+                <CameraOffAvatar
+                  nome={myNome}
+                  avatarTipo={myAvatarTipo}
+                  avatarValor={myAvatarValor}
+                  micMuted={!micOn}
+                />
 
               )}
 
@@ -1702,6 +2031,23 @@ export default function VideoMeeting({
 
       )}
 
+      <div
+        onMouseDown={handleDockResizeMouseDown}
+        title="Redimensionar"
+        className="
+          absolute
+          bottom-1
+          right-1
+          h-4
+          w-4
+          cursor-nwse-resize
+          text-slate-300
+          hover:text-slate-500
+        "
+      >
+        ⤡
+      </div>
+
     </div>
 
     {expandedStream && (
@@ -1737,9 +2083,10 @@ export default function VideoMeeting({
                 : false
             }
             micMuted={
-              expandedId !== "local" &&
-              expandedId !== null &&
-              remoteMicOff[expandedId] === true
+              expandedId === "local"
+                ? !micOn
+                : expandedId !== null &&
+                  remoteMicOff[expandedId] === true
             }
             onClick={() =>
               setExpandedId(null)
