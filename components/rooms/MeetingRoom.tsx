@@ -1,10 +1,12 @@
 import PositionedAvatar from "../PositionedAvatar";
+import { EmptySeatMarker } from "./RoomDecor";
 
 type User = {
   id: number;
   nome: string;
   room: string;
   status?: string;
+  seat?: number | null;
   avatarTipo?: string | null;
   avatarValor?: string | null;
 };
@@ -16,12 +18,14 @@ type Props = {
     userId: number,
     userName: string
   ) => void;
+  onSeatClick: (seat: number) => void;
 };
 
 export default function MeetingRoom({
   users,
   currentUserId,
   onUserClick,
+  onSeatClick,
 }: Props) {
 
   const positions = [
@@ -83,28 +87,44 @@ export default function MeetingRoom({
         Mesa de Reunião
       </div>
 
-      {users.map((user, index) => {
+      {positions.map((pos, seatIndex) => {
 
-        const pos =
-          positions[index] ||
-          { x: 50, y: 50 };
+        const occupant = users.find(
+          (user) => user.seat === seatIndex
+        );
+
+        if (occupant) {
+          return (
+            <PositionedAvatar
+              key={seatIndex}
+              nome={occupant.nome}
+              status={occupant.status}
+              isCurrentUser={
+                occupant.id === currentUserId
+              }
+              avatarTipo={occupant.avatarTipo}
+              avatarValor={occupant.avatarValor}
+              x={pos.x}
+              y={pos.y}
+              onClick={() =>
+                onUserClick(
+                  occupant.id,
+                  occupant.nome
+                )
+              }
+            />
+          );
+        }
 
         return (
-          <PositionedAvatar
-  key={user.id}
-  nome={user.nome}
-  status={user.status}
-  isCurrentUser={
-    user.id === currentUserId
-  }
-  avatarTipo={user.avatarTipo}
-  avatarValor={user.avatarValor}
-  x={pos.x}
-  y={pos.y}
-  onClick={() =>
-  onUserClick(user.id, user.nome)
-}
-/>
+          <EmptySeatMarker
+            key={seatIndex}
+            x={pos.x}
+            y={pos.y}
+            onClick={() =>
+              onSeatClick(seatIndex)
+            }
+          />
         );
       })}
 

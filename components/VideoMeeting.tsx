@@ -27,6 +27,8 @@ type Props = {
   room: string;
   autoJoin?: boolean;
   onNotify?: (message: string) => void;
+  onJoined?: () => void;
+  onLeft?: () => void;
 };
 
 const ICE_SERVERS = [
@@ -134,6 +136,8 @@ export default function VideoMeeting({
   room,
   autoJoin = false,
   onNotify,
+  onJoined,
+  onLeft,
 }: Props) {
 
   const localStreamRef =
@@ -238,6 +242,9 @@ export default function VideoMeeting({
 
   const [speakingIds, setSpeakingIds] =
     useState<Set<string>>(new Set());
+
+  const [minimized, setMinimized] =
+    useState(false);
 
   function removePeer(
     remoteSocketId: string
@@ -578,6 +585,8 @@ export default function VideoMeeting({
 
   function leaveMeeting() {
 
+    const wasJoined = joinedRef.current;
+
     const socket = getSocket();
 
     socket.emit("leave-meeting");
@@ -601,8 +610,13 @@ export default function VideoMeeting({
     setAutoJoined(false);
     setCameraOn(true);
     setMicOn(true);
+    setMinimized(false);
 
     joiningRef.current = false;
+
+    if (wasJoined) {
+      onLeft?.();
+    }
   }
 
   async function joinMeeting(
@@ -636,6 +650,8 @@ export default function VideoMeeting({
         Boolean(options.audioOnly)
       );
       setJoined(true);
+
+      onJoined?.();
 
       const socket =
         getSocket();
@@ -1366,32 +1382,79 @@ export default function VideoMeeting({
       ? remoteStreams[expandedId]
       : null;
 
+  const participantCount =
+    (joined ? 1 : 0) +
+    remoteEntries.length;
+
   return (
+
+    <>
 
     <div
       className="
-        mt-6
+        fixed
+        bottom-4
+        right-4
+        z-40
+        w-80
+        max-h-[80vh]
+        overflow-y-auto
         rounded-2xl
         border
         bg-white
-        p-5
-        shadow-sm
+        p-4
+        shadow-xl
       "
     >
 
-      <h3
+      <div
         className="
-          mb-4
-          text-xl
-          font-semibold
+          flex
+          items-center
+          justify-between
+          gap-2
         "
       >
-        Chamada de voz e vídeo
-      </h3>
+
+        <h3
+          className="
+            truncate
+            text-sm
+            font-semibold
+            text-slate-900
+          "
+        >
+          🎥 {room}
+        </h3>
+
+        {joined && (
+
+          <button
+            onClick={() =>
+              setMinimized((current) => !current)
+            }
+            title={
+              minimized
+                ? "Expandir chamada"
+                : "Minimizar chamada"
+            }
+            className="
+              shrink-0
+              text-xs
+              text-slate-400
+              hover:text-slate-600
+            "
+          >
+            {minimized ? "▸" : "▾"}
+          </button>
+
+        )}
+
+      </div>
 
       {!joined && autoJoin && (
 
-        <p className="text-sm text-slate-500">
+        <p className="mt-3 text-xs text-slate-500">
           🚪 Conectando áudio automaticamente
           (portas abertas)...
         </p>
@@ -1403,10 +1466,12 @@ export default function VideoMeeting({
         <button
           onClick={() => joinMeeting()}
           className="
+            mt-3
             rounded-lg
             bg-blue-600
             px-4
             py-2
+            text-sm
             text-white
           "
         >
@@ -1415,73 +1480,34 @@ export default function VideoMeeting({
 
       )}
 
+      {joined && minimized && (
+
+        <p className="mt-2 text-xs text-slate-500">
+          {participantCount} participante(s) —
+          chamada em andamento
+        </p>
+
+      )}
+
       {joined && (
 
-        <div>
+        <div
+          style={{
+            display: minimized
+              ? "none"
+              : undefined,
+          }}
+        >
 
-          {expandedStream && (
-
-            <div className="mb-4">
-
-              <VideoTile
-                stream={expandedStream}
-                muted={expandedId === "local"}
-                large
-                speaking={
-                  expandedId
-                    ? speakingIds.has(
-                        expandedId
-                      )
-                    : false
-                }
-                micMuted={
-                  expandedId !== "local" &&
-                  expandedId !== null &&
-                  remoteMicOff[expandedId] === true
-                }
-                onClick={() =>
-                  setExpandedId(null)
-                }
-                onElement={(el) => {
-                  expandedVideoRef.current =
-                    el;
-                }}
-              />
-
-              <div className="mt-2 flex gap-4">
-
-                <button
-                  onClick={() =>
-                    setExpandedId(null)
-                  }
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  ↙️ Ver em grade
-                </button>
-
-                <button
-                  onClick={goFullscreen}
-                  className="text-sm text-blue-600 hover:underline"
-                >
-                  ⛶ Tela cheia
-                </button>
-
-              </div>
-
-            </div>
-
-          )}
-
-          <p className="mb-2 text-xs text-slate-400">
+          <p className="mb-2 mt-3 text-xs text-slate-400">
             Clique em um vídeo para ver maior.
           </p>
 
           <div
             className="
               grid
-              gap-4
-              md:grid-cols-2
-              xl:grid-cols-3
+              grid-cols-1
+              gap-3
             "
           >
 
@@ -1677,6 +1703,79 @@ export default function VideoMeeting({
       )}
 
     </div>
+
+    {expandedStream && (
+
+      <div
+        onClick={() => setExpandedId(null)}
+        className="
+          fixed
+          inset-0
+          z-50
+          flex
+          items-center
+          justify-center
+          bg-black/70
+          p-6
+        "
+      >
+
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="w-full max-w-3xl"
+        >
+
+          <VideoTile
+            stream={expandedStream}
+            muted={expandedId === "local"}
+            large
+            speaking={
+              expandedId
+                ? speakingIds.has(
+                    expandedId
+                  )
+                : false
+            }
+            micMuted={
+              expandedId !== "local" &&
+              expandedId !== null &&
+              remoteMicOff[expandedId] === true
+            }
+            onClick={() =>
+              setExpandedId(null)
+            }
+            onElement={(el) => {
+              expandedVideoRef.current = el;
+            }}
+          />
+
+          <div className="mt-3 flex justify-center gap-4">
+
+            <button
+              onClick={() =>
+                setExpandedId(null)
+              }
+              className="text-sm text-white hover:underline"
+            >
+              ↙️ Ver em grade
+            </button>
+
+            <button
+              onClick={goFullscreen}
+              className="text-sm text-white hover:underline"
+            >
+              ⛶ Tela cheia
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    )}
+
+    </>
 
   );
 }

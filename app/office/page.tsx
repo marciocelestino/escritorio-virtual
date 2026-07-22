@@ -13,6 +13,8 @@ import RoomPulse from "@/components/RoomPulse";
 import StatusSelector from "@/components/StatusSelector";
 import { getSessionUser, getSessionToken } from "@/lib/session";
 import RoomView from "@/components/RoomView";
+import VideoMeeting from "@/components/VideoMeeting";
+import { roomSupportsCall } from "@/lib/rooms";
 import { playPingSound } from "@/lib/sound";
 
 type UserItem = {
@@ -26,6 +28,7 @@ type UserItem = {
   online?: boolean;
   room: string;
   portasAbertas?: boolean;
+  seat?: number | null;
   salaNome?: string | null;
   avatarTipo?: string | null;
   avatarValor?: string | null;
@@ -39,6 +42,7 @@ type LivePresence = {
     | "Ausente"
     | "Reuniao";
   portasAbertas?: boolean;
+  seat?: number | null;
 };
 
 export default function OfficePage() {
@@ -62,6 +66,13 @@ export default function OfficePage() {
 
   const [portasAbertas, setPortasAbertas] =
   useState(false);
+
+  // Sala da chamada de vídeo atual — fica fixa a partir do momento em que
+  // entra numa chamada, mesmo que a pessoa navegue pra outra sala (o dock
+  // flutuante continua mostrando essa chamada até ela sair de verdade).
+  // null = não está em nenhuma chamada agora.
+  const [callRoom, setCallRoom] =
+  useState<string | null>(null);
 
   const [notification, setNotification] =
   useState("");
@@ -147,6 +158,46 @@ if (
       [currentUserId]: {
         ...current,
         room,
+        // O servidor reatribui um lugar livre na sala nova assim que o
+        // room-change chegar — zera aqui pra não mostrar por um instante
+        // a pessoa "sentada" num lugar da sala antiga.
+        seat: null,
+      },
+    };
+  });
+}
+
+function chooseSeat(seat: number) {
+
+  if (!currentUserId) {
+    return;
+  }
+
+  const socket =
+    getSocket();
+
+  socket.emit(
+    "seat-change",
+    {
+      userId: currentUserId,
+      seat,
+    }
+  );
+
+  setLiveUsers((prev) => {
+
+    const current =
+      prev[currentUserId];
+
+    if (!current) {
+      return prev;
+    }
+
+    return {
+      ...prev,
+      [currentUserId]: {
+        ...current,
+        seat,
       },
     };
   });
@@ -189,6 +240,7 @@ function showNotification(
         room: live.room,
         status: live.status,
         portasAbertas: live.portasAbertas,
+        seat: live.seat,
         online: true,
       };
     });
@@ -295,6 +347,7 @@ socket.on(
     room: string;
     status?: LivePresence["status"];
     portasAbertas?: boolean;
+    seat?: number | null;
   }>) => {
 
     const map: Record<
@@ -307,6 +360,7 @@ socket.on(
         room: liveUser.room,
         status: liveUser.status,
         portasAbertas: liveUser.portasAbertas,
+        seat: liveUser.seat,
       };
     });
 
@@ -514,6 +568,42 @@ useEffect(() => {
         return "Escritório";
     }
   };
+
+  // Enquanto não estiver em nenhuma chamada, o dock representa a sala que
+  // está sendo vista agora. Assim que entra numa chamada, `callRoom` fica
+  // fixo naquela sala — navegar pra outra sala não muda mais o `room` da
+  // chamada, só o que aparece no resto da tela (é isso que faz o dock
+  // sobreviver à navegação).
+  const videoRoom =
+    callRoom ?? currentRoom;
+
+  // Com uma chamada em andamento o dock sempre aparece (mesmo se a sala
+  // que está sendo vista agora não suporta chamada própria); sem chamada,
+  // só aparece nas salas que suportam.
+  const showVideoDock =
+    callRoom !== null ||
+    roomSupportsCall(currentRoom);
+
+  const currentRoomUsers =
+    onlineUsers.filter(
+      (user) => user.room === currentRoom
+    );
+
+  const someoneElseWithOpenDoor =
+    currentRoomUsers.some(
+      (user) =>
+        user.id !== currentUserId &&
+        user.portasAbertas
+    );
+
+  const autoJoinCall = Boolean(
+    callRoom === null &&
+      roomSupportsCall(currentRoom) &&
+      currentRoomUsers.find(
+        (user) => user.id === currentUserId
+      )?.portasAbertas &&
+      someoneElseWithOpenDoor
+  );
 
   return (
 
@@ -779,7 +869,7 @@ useEffect(() => {
     );
 
   }}
-  onNotify={showNotification}
+  onSeatClick={chooseSeat}
 />
             </div>
 
@@ -1050,6 +1140,22 @@ useEffect(() => {
         </aside>
 
       </div>
+
+      {showVideoDock && (
+
+        <VideoMeeting
+          room={videoRoom}
+          autoJoin={autoJoinCall}
+          onNotify={showNotification}
+          onJoined={() =>
+            setCallRoom(currentRoom)
+          }
+          onLeft={() =>
+            setCallRoom(null)
+          }
+        />
+
+      )}
 
     </main>
   );

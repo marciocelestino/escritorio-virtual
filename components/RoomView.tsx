@@ -2,7 +2,6 @@ import ReceptionRoom from "./rooms/ReceptionRoom";
 import MeetingRoom from "./rooms/MeetingRoom";
 import NatureRoom from "./rooms/NatureRoom";
 import UserOfficeRoom from "./rooms/UserOfficeRoom";
-import VideoMeeting from "./VideoMeeting";
 
 type User = {
   id: number;
@@ -10,6 +9,7 @@ type User = {
   room: string;
   status?: string;
   portasAbertas?: boolean;
+  seat?: number | null;
   avatarTipo?: string | null;
   avatarValor?: string | null;
 };
@@ -22,14 +22,14 @@ type Props = {
     userId: number,
     userName: string
   ) => void;
-  onNotify?: (message: string) => void;
+  onSeatClick: (seat: number) => void;
 };
 export default function RoomView({
   room,
   users,
   currentUserId,
   onUserClick,
-  onNotify,
+  onSeatClick,
 }: Props) {
 
   const roomUsers =
@@ -37,50 +37,27 @@ export default function RoomView({
       (user) => user.room === room
     );
 
-  const myselfInRoom =
-    roomUsers.find(
-      (user) => user.id === currentUserId
-    );
-
-  const someoneElseWithOpenDoor =
-    roomUsers.some(
-      (user) =>
-        user.id !== currentUserId &&
-        user.portasAbertas
-    );
-
-  const autoJoinCall = Boolean(
-    myselfInRoom?.portasAbertas &&
-      someoneElseWithOpenDoor
-  );
-
   if (room === "Recepção") {
     return (
       <ReceptionRoom
         users={roomUsers}
         currentUserId={currentUserId}
         onUserClick={onUserClick}
+        onSeatClick={onSeatClick}
       />
     );
   }
 
-if (room === "Sala de Reunião") {
-  return (
-    <>
+  if (room === "Sala de Reunião") {
+    return (
       <MeetingRoom
         users={roomUsers}
         currentUserId={currentUserId}
         onUserClick={onUserClick}
+        onSeatClick={onSeatClick}
       />
-
-      <VideoMeeting
-        room={room}
-        autoJoin={autoJoinCall}
-        onNotify={onNotify}
-      />
-    </>
-  );
-}
+    );
+  }
 
   if (room === "Espaço Natureza") {
     return (
@@ -88,24 +65,18 @@ if (room === "Sala de Reunião") {
         users={roomUsers}
         currentUserId={currentUserId}
         onUserClick={onUserClick}
+        onSeatClick={onSeatClick}
       />
-          );
+    );
   }
 
   return (
-    <>
-      <UserOfficeRoom
-        room={room}
-        users={roomUsers}
-        currentUserId={currentUserId}
-        onUserClick={onUserClick}
-      />
-
-      <VideoMeeting
-        room={room}
-        autoJoin={autoJoinCall}
-        onNotify={onNotify}
-      />
-    </>
+    <UserOfficeRoom
+      room={room}
+      users={roomUsers}
+      currentUserId={currentUserId}
+      onUserClick={onUserClick}
+      onSeatClick={onSeatClick}
+    />
   );
 }

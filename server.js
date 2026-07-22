@@ -92,6 +92,32 @@ app.prepare().then(() => {
     );
   }
 
+  // Acha o primeiro número de assento livre numa sala — os assentos são
+  // só números (0, 1, 2...), sem precisar o servidor conhecer o layout
+  // visual de cada sala (isso fica só no componente de cada sala no
+  // cliente, que ignora um número de assento maior do que os lugares que
+  // ela desenha).
+  function assignFreeSeat(room, excludeUserId) {
+    const occupied = new Set(
+      Object.values(onlineUsers)
+        .filter(
+          (user) =>
+            user.room === room &&
+            user.id !== excludeUserId &&
+            typeof user.seat === "number"
+        )
+        .map((user) => user.seat)
+    );
+
+    let seat = 0;
+
+    while (occupied.has(seat)) {
+      seat++;
+    }
+
+    return seat;
+  }
+
   function leaveCurrentCall(socket) {
     const callKey = socketCallRoom.get(socket.id);
 
@@ -126,6 +152,7 @@ app.prepare().then(() => {
         room: user.room,
         status: user.status,
         portasAbertas: Boolean(user.portasAbertas),
+        seat: assignFreeSeat(user.room, user.id),
         socketId: socket.id,
       };
 
@@ -146,10 +173,52 @@ app.prepare().then(() => {
       if (onlineUsers[userId]) {
         onlineUsers[userId].room = room;
 
+        // O assento é sempre por sala — ao mudar de sala, reatribui
+        // automaticamente o primeiro lugar livre na sala de destino (o
+        // usuário ainda pode clicar em outro lugar depois pra trocar).
+        onlineUsers[userId].seat = assignFreeSeat(
+          room,
+          userId
+        );
+
         io.emit("presence-update", Object.values(onlineUsers));
 
         console.log("Mudou de sala:", onlineUsers[userId].nome, room);
       }
+    });
+
+    // Troca de assento dentro da mesma sala (clique em um lugar livre).
+    // Se o lugar já estiver ocupado por outra pessoa, ignora silenciosamente
+    // — evita duas pessoas caindo no mesmo lugar por uma corrida de cliques.
+    socket.on("seat-change", ({ userId, seat }) => {
+      if (socketUsers.get(socket.id) !== userId) {
+        console.warn(
+          "Mudança de assento rejeitada: socket não corresponde ao usuário",
+          userId
+        );
+        return;
+      }
+
+      const user = onlineUsers[userId];
+
+      if (!user || typeof seat !== "number") {
+        return;
+      }
+
+      const seatTaken = Object.values(onlineUsers).some(
+        (other) =>
+          other.id !== userId &&
+          other.room === user.room &&
+          other.seat === seat
+      );
+
+      if (seatTaken) {
+        return;
+      }
+
+      user.seat = seat;
+
+      io.emit("presence-update", Object.values(onlineUsers));
     });
 
     socket.on("status-change", ({ userId, status }) => {
