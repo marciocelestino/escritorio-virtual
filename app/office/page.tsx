@@ -815,10 +815,15 @@ useEffect(() => {
               >
                 Ideias para as próximas fases:
                 responsividade para celular,
-                virar um webapp instalável (PWA),
+                webapp instalável (PWA),
                 chat de texto,
-                gravação de reuniões
-                e modo escuro.
+                modo escuro,
+                gravação de reuniões,
+                cargos e salas restritas por equipe,
+                e melhorias na chamada de vídeo
+                (avatar com a câmera desligada,
+                indicador de quem está falando,
+                compartilhamento de tela aprimorado).
               </p>
 
             </div>
