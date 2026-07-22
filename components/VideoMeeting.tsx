@@ -37,11 +37,15 @@ function VideoTile({
   muted = false,
   large = false,
   onClick,
+  onElement,
 }: {
   stream: MediaStream;
   muted?: boolean;
   large?: boolean;
   onClick?: () => void;
+  onElement?: (
+    el: HTMLVideoElement | null
+  ) => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
 
@@ -50,6 +54,15 @@ function VideoTile({
       ref.current.srcObject = stream;
     }
   }, [stream]);
+
+  useEffect(() => {
+
+    onElement?.(ref.current);
+
+    return () => onElement?.(null);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <video
@@ -107,6 +120,11 @@ export default function VideoMeeting({
 
   const joiningRef =
     useRef(false);
+
+  const expandedVideoRef =
+    useRef<HTMLVideoElement | null>(
+      null
+    );
 
   const [joined, setJoined] =
     useState(false);
@@ -595,6 +613,20 @@ export default function VideoMeeting({
     );
   }
 
+  function goFullscreen() {
+
+    expandedVideoRef.current
+      ?.requestFullscreen?.()
+      .catch((error) => {
+
+        console.error(
+          "Erro ao entrar em tela cheia:",
+          error
+        );
+
+      });
+  }
+
   // "Portas abertas": conecta áudio automaticamente (sem vídeo) quando o
   // colega presente na sala também está de portas abertas — sem pedir
   // clique em "Entrar na Chamada".
@@ -884,16 +916,31 @@ export default function VideoMeeting({
                 onClick={() =>
                   setExpandedId(null)
                 }
+                onElement={(el) => {
+                  expandedVideoRef.current =
+                    el;
+                }}
               />
 
-              <button
-                onClick={() =>
-                  setExpandedId(null)
-                }
-                className="mt-2 text-sm text-blue-600 hover:underline"
-              >
-                ↙️ Ver em grade
-              </button>
+              <div className="mt-2 flex gap-4">
+
+                <button
+                  onClick={() =>
+                    setExpandedId(null)
+                  }
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  ↙️ Ver em grade
+                </button>
+
+                <button
+                  onClick={goFullscreen}
+                  className="text-sm text-blue-600 hover:underline"
+                >
+                  ⛶ Tela cheia
+                </button>
+
+              </div>
 
             </div>
 
