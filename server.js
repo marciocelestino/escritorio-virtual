@@ -86,6 +86,12 @@ app.prepare().then(() => {
   const socketUsers = new Map();
   const socketCallRoom = new Map();
 
+  function getUserBySocketId(socketId) {
+    return Object.values(onlineUsers).find(
+      (user) => user.socketId === socketId
+    );
+  }
+
   function leaveCurrentCall(socket) {
     const callKey = socketCallRoom.get(socket.id);
 
@@ -248,7 +254,10 @@ app.prepare().then(() => {
         io.sockets.adapter.rooms.get(callKey);
 
       const existingParticipants = existingRoom
-        ? Array.from(existingRoom)
+        ? Array.from(existingRoom).map((socketId) => ({
+            socketId,
+            nome: getUserBySocketId(socketId)?.nome,
+          }))
         : [];
 
       socket.join(callKey);
@@ -259,8 +268,11 @@ app.prepare().then(() => {
         existingParticipants
       );
 
+      const joiner = getUserBySocketId(socket.id);
+
       socket.to(callKey).emit("user-joined-meeting", {
         socketId: socket.id,
+        nome: joiner?.nome,
       });
 
       console.log("Entrou na chamada:", room, socket.id);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { buildRoomList } from "@/lib/rooms";
 
 type SidebarUser = {
@@ -21,6 +22,23 @@ export default function Sidebar({
   users,
   onRoomChange,
 }: Props) {
+
+  const [collapsed, setCollapsed] =
+    useState(() =>
+      typeof window !== "undefined" &&
+      localStorage.getItem(
+        "salasColapsadas"
+      ) === "true"
+    );
+
+  useEffect(() => {
+
+    localStorage.setItem(
+      "salasColapsadas",
+      String(collapsed)
+    );
+
+  }, [collapsed]);
 
   const rooms = buildRoomList(users);
 
@@ -66,18 +84,31 @@ export default function Sidebar({
         bg-white
       "
     >
-      <h2
+      <button
+        onClick={() =>
+          setCollapsed((prev) => !prev)
+        }
         className="
+          flex
+          w-full
+          items-center
+          justify-between
           border-b
           p-4
           font-bold
           text-slate-900
+          hover:bg-slate-50
         "
       >
         Salas
-      </h2>
 
-      {rooms.map((room) => {
+        <span className="text-slate-400">
+          {collapsed ? "▸" : "▾"}
+        </span>
+      </button>
+
+      {!collapsed &&
+        rooms.map((room) => {
 
         const active =
           room.nome === currentRoom;

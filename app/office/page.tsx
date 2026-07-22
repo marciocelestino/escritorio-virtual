@@ -71,6 +71,25 @@ export default function OfficePage() {
     room: string;
   } | null>(null);
 
+  const [
+    usuariosColapsados,
+    setUsuariosColapsados,
+  ] = useState(() =>
+    typeof window !== "undefined" &&
+    localStorage.getItem(
+      "usuariosColapsados"
+    ) === "true"
+  );
+
+  useEffect(() => {
+
+    localStorage.setItem(
+      "usuariosColapsados",
+      String(usuariosColapsados)
+    );
+
+  }, [usuariosColapsados]);
+
   // Guarda o estado de presença mais recente pra poder reanunciar ao
   // servidor sempre que o socket reconectar (ex.: depois de uma queda de
   // rede ou um deploy no servidor) — sem isso, o socket volta com um id
@@ -855,25 +874,35 @@ useEffect(() => {
           "
         >
 
-          <div
+          <button
+            onClick={() =>
+              setUsuariosColapsados(
+                (prev) => !prev
+              )
+            }
             className="
+              flex
+              w-full
+              items-center
+              justify-between
               border-b
               p-4
+              font-bold
+              text-slate-900
+              hover:bg-slate-50
             "
           >
+            Usuários
 
-            <h2
-              className="
-                font-bold
-                text-slate-900
-              "
-            >
-              Usuários
-            </h2>
+            <span className="text-slate-400">
+              {usuariosColapsados
+                ? "▸"
+                : "▾"}
+            </span>
+          </button>
 
-          </div>
-
-          {onlineUsers.map((user) => (
+          {!usuariosColapsados &&
+            onlineUsers.map((user) => (
 
             <UserCard
               key={user.id}

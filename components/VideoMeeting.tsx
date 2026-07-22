@@ -164,6 +164,13 @@ export default function VideoMeeting({
     Record<string, MediaStream>
   >({});
 
+  const [
+    participantNames,
+    setParticipantNames,
+  ] = useState<
+    Record<string, string>
+  >({});
+
   function removePeer(
     remoteSocketId: string
   ) {
@@ -190,11 +197,52 @@ export default function VideoMeeting({
       return next;
     });
 
+    setParticipantNames((prev) => {
+      const next = { ...prev };
+      delete next[remoteSocketId];
+      return next;
+    });
+
     setExpandedId((current) =>
       current === remoteSocketId
         ? null
         : current
     );
+  }
+
+  async function restartIce(
+    remoteSocketId: string,
+    peer: RTCPeerConnection
+  ) {
+
+    try {
+
+      const offer =
+        await peer.createOffer({
+          iceRestart: true,
+        });
+
+      await peer.setLocalDescription(
+        offer
+      );
+
+      getSocket().emit(
+        "offer",
+        {
+          to: remoteSocketId,
+          offer,
+        }
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Erro ao tentar recuperar conexão com",
+        remoteSocketId,
+        error
+      );
+
+    }
   }
 
   function createPeerConnection(
@@ -227,6 +275,50 @@ export default function VideoMeeting({
             candidate: event.candidate,
           }
         );
+      }
+
+    };
+
+    // Sem isso, uma queda de rede no meio da chamada (wifi instável,
+    // troca de rede etc.) deixa a conexão "travada" mostrando o último
+    // quadro recebido pra sempre — o WebRTC não recupera sozinho sem uma
+    // renegociação explícita.
+    peer.oniceconnectionstatechange = () => {
+
+      const state = peer.iceConnectionState;
+
+      if (state === "failed") {
+
+        console.warn(
+          "Conexão com",
+          remoteSocketId,
+          "falhou, tentando recuperar..."
+        );
+
+        restartIce(
+          remoteSocketId,
+          peer
+        );
+
+      }
+
+      if (state === "disconnected") {
+
+        // "disconnected" pode se recuperar sozinho em poucos segundos —
+        // só desiste (remove o participante) se continuar assim.
+        setTimeout(() => {
+
+          if (
+            peer.iceConnectionState ===
+              "disconnected" ||
+            peer.iceConnectionState ===
+              "failed"
+          ) {
+            removePeer(remoteSocketId);
+          }
+
+        }, 8000);
+
       }
 
     };
@@ -742,10 +834,31 @@ export default function VideoMeeting({
     socket.on(
       "existing-participants",
       async (
-        participantIds: string[]
+        participants: Array<{
+          socketId: string;
+          nome?: string;
+        }>
       ) => {
 
-        for (const remoteId of participantIds) {
+        setParticipantNames((prev) => {
+
+          const next = { ...prev };
+
+          participants.forEach(
+            ({ socketId, nome }) => {
+              if (nome) {
+                next[socketId] = nome;
+              }
+            }
+          );
+
+          return next;
+
+        });
+
+        for (const {
+          socketId: remoteId,
+        } of participants) {
 
           const peer =
             createPeerConnection(
@@ -779,6 +892,26 @@ export default function VideoMeeting({
 
           }
 
+        }
+
+      }
+    );
+
+    socket.on(
+      "user-joined-meeting",
+      ({
+        socketId,
+        nome,
+      }: {
+        socketId: string;
+        nome?: string;
+      }) => {
+
+        if (nome) {
+          setParticipantNames((prev) => ({
+            ...prev,
+            [socketId]: nome,
+          }));
         }
 
       }
@@ -914,6 +1047,7 @@ export default function VideoMeeting({
     return () => {
 
       socket.off("existing-participants");
+      socket.off("user-joined-meeting");
       socket.off("user-left-meeting");
       socket.off("offer");
       socket.off("answer");
@@ -1114,7 +1248,9 @@ export default function VideoMeeting({
                       text-slate-500
                     "
                   >
-                    Participante
+                    {participantNames[
+                      socketId
+                    ] ?? "Participante"}
 
                     <button
                       onClick={(e) => {
