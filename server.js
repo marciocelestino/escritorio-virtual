@@ -289,6 +289,39 @@ app.prepare().then(() => {
       });
     });
 
+    // Remove um participante da chamada — só funciona se quem pediu e o
+    // alvo estiverem na mesma sala de chamada (não dá pra expulsar alguém
+    // de uma chamada que você nem está). O alvo recebe um aviso e, do lado
+    // dele, encerra a própria captura de câmera/microfone (o servidor só
+    // consegue tirar o socket da sala de sinalização).
+    socket.on("kick-from-meeting", ({ to }) => {
+      const senderId = socketUsers.get(socket.id);
+      const sender = onlineUsers[senderId];
+
+      if (!sender || !to) {
+        return;
+      }
+
+      const callKey = socketCallRoom.get(socket.id);
+      const targetCallKey = socketCallRoom.get(to);
+
+      if (!callKey || targetCallKey !== callKey) {
+        return;
+      }
+
+      const targetSocket = io.sockets.sockets.get(to);
+
+      if (!targetSocket) {
+        return;
+      }
+
+      io.to(to).emit("kicked-from-meeting", {
+        fromNome: sender.nome,
+      });
+
+      leaveCurrentCall(targetSocket);
+    });
+
     // Avisa quem está na chamada se o microfone local está ligado ou
     // desligado — mostra um selo de "mutado" no card de cada participante.
     // Com `to`, avisa só um participante específico (usado quando alguém

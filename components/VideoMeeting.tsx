@@ -46,6 +46,7 @@ function VideoTile({
   large = false,
   speaking = false,
   micMuted = false,
+  sinkId,
   onClick,
   onElement,
 }: {
@@ -54,6 +55,7 @@ function VideoTile({
   large?: boolean;
   speaking?: boolean;
   micMuted?: boolean;
+  sinkId?: string;
   onClick?: () => void;
   onElement?: (
     el: HTMLVideoElement | null
@@ -75,6 +77,29 @@ function VideoTile({
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // setSinkId (escolher o alto-falante de saída) é uma API não-padrão,
+  // hoje só disponível em navegadores baseados em Chromium — ignora
+  // silenciosamente se o navegador não suportar.
+  useEffect(() => {
+
+    const el = ref.current as
+      | (HTMLVideoElement & {
+          setSinkId?: (
+            id: string
+          ) => Promise<void>;
+        })
+      | null;
+
+    if (
+      el &&
+      sinkId &&
+      typeof el.setSinkId === "function"
+    ) {
+      el.setSinkId(sinkId).catch(() => {});
+    }
+
+  }, [sinkId]);
 
   return (
     <div
@@ -360,6 +385,18 @@ export default function VideoMeeting({
 
   const [minimized, setMinimized] =
     useState(false);
+
+  const [audioInputs, setAudioInputs] =
+    useState<MediaDeviceInfo[]>([]);
+
+  const [audioOutputs, setAudioOutputs] =
+    useState<MediaDeviceInfo[]>([]);
+
+  const [selectedMicId, setSelectedMicId] =
+    useState("");
+
+  const [selectedSpeakerId, setSelectedSpeakerId] =
+    useState("");
 
   const [dockPos, setDockPos] =
     useState<{
@@ -1094,12 +1131,138 @@ export default function VideoMeeting({
     });
   }
 
+  async function refreshAudioDevices() {
+
+    try {
+
+      const devices =
+        await navigator.mediaDevices.enumerateDevices();
+
+      setAudioInputs(
+        devices.filter(
+          (device) => device.kind === "audioinput"
+        )
+      );
+
+      setAudioOutputs(
+        devices.filter(
+          (device) => device.kind === "audiooutput"
+        )
+      );
+
+      // Pré-seleciona o microfone que já está em uso (senão o menu
+      // mostraria o primeiro da lista, que pode não ser o ativo).
+      setSelectedMicId((current) => {
+
+        if (current) {
+          return current;
+        }
+
+        const activeId =
+          localStreamRef.current
+            ?.getAudioTracks()[0]
+            ?.getSettings().deviceId;
+
+        return activeId ?? current;
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "Erro ao listar dispositivos de áudio:",
+        error
+      );
+
+    }
+  }
+
+  async function switchMicrophone(
+    deviceId: string
+  ) {
+
+    setSelectedMicId(deviceId);
+
+    const localStream =
+      localStreamRef.current;
+
+    if (!localStream || !deviceId) {
+      return;
+    }
+
+    try {
+
+      const newStream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: {
+            deviceId: { exact: deviceId },
+          },
+        });
+
+      const newTrack =
+        newStream.getAudioTracks()[0];
+
+      if (!newTrack) {
+        return;
+      }
+
+      newTrack.enabled = micOnRef.current;
+
+      const oldTrack =
+        localStream.getAudioTracks()[0];
+
+      if (oldTrack) {
+        oldTrack.stop();
+        localStream.removeTrack(oldTrack);
+      }
+
+      localStream.addTrack(newTrack);
+
+      for (const peer of peersRef.current.values()) {
+
+        const sender = peer
+          .getSenders()
+          .find(
+            (s) => s.track?.kind === "audio"
+          );
+
+        if (sender) {
+          await sender.replaceTrack(newTrack);
+        }
+
+      }
+
+      // O analisador de volume foi criado a partir da faixa de áudio
+      // antiga — precisa recriar pra acompanhar a faixa nova.
+      detachAnalyser("local");
+      attachAnalyser("local", localStream);
+
+    } catch (error) {
+
+      console.error(
+        "Erro ao trocar microfone:",
+        error
+      );
+
+    }
+  }
+
   function muteRemoteParticipant(
     remoteSocketId: string
   ) {
 
     getSocket().emit(
       "mute-user",
+      { to: remoteSocketId }
+    );
+  }
+
+  function kickParticipant(
+    remoteSocketId: string
+  ) {
+
+    getSocket().emit(
+      "kick-from-meeting",
       { to: remoteSocketId }
     );
   }
@@ -1345,6 +1508,35 @@ export default function VideoMeeting({
 
   }, [joined]);
 
+  // Os rótulos dos dispositivos só vêm preenchidos depois que a permissão
+  // de microfone já foi concedida (o que só acontece depois de entrar na
+  // chamada) — por isso só busca a lista aqui, e reescuta o evento de
+  // dispositivo plugado/removido enquanto a chamada durar.
+  useEffect(() => {
+
+    if (!joined) {
+      return;
+    }
+
+    // refreshAudioDevices só chama setState depois do await em
+    // enumerateDevices() — não é uma atualização síncrona dentro do efeito.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refreshAudioDevices();
+
+    navigator.mediaDevices.addEventListener(
+      "devicechange",
+      refreshAudioDevices
+    );
+
+    return () => {
+      navigator.mediaDevices.removeEventListener(
+        "devicechange",
+        refreshAudioDevices
+      );
+    };
+
+  }, [joined]);
+
   useEffect(() => {
     roomRef.current = room;
   }, [room]);
@@ -1409,6 +1601,23 @@ export default function VideoMeeting({
         onNotify?.(
           `🔇 ${fromNome} mutou seu microfone.`
         );
+
+      }
+    );
+
+    socket.on(
+      "kicked-from-meeting",
+      ({
+        fromNome,
+      }: {
+        fromNome: string;
+      }) => {
+
+        onNotify?.(
+          `${fromNome} removeu você da chamada.`
+        );
+
+        leaveMeeting();
 
       }
     );
@@ -1662,6 +1871,7 @@ export default function VideoMeeting({
       socket.off("answer");
       socket.off("ice-candidate");
       socket.off("muted-by-someone");
+      socket.off("kicked-from-meeting");
       socket.off("mic-state-changed");
       socket.off(
         "connect",
@@ -1912,17 +2122,34 @@ export default function VideoMeeting({
                       socketId
                     ] ?? "Participante"}
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        muteRemoteParticipant(
-                          socketId
-                        );
-                      }}
-                      className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600 hover:bg-slate-200"
-                    >
-                      🔇 Mutar
-                    </button>
+                    <span className="flex shrink-0 gap-1">
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          muteRemoteParticipant(
+                            socketId
+                          );
+                        }}
+                        className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600 hover:bg-slate-200"
+                      >
+                        🔇 Mutar
+                      </button>
+
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          kickParticipant(
+                            socketId
+                          );
+                        }}
+                        title="Remover da chamada"
+                        className="rounded-md bg-red-50 px-2 py-1 text-xs text-red-600 hover:bg-red-100"
+                      >
+                        ❌
+                      </button>
+
+                    </span>
                   </p>
 
                   <VideoTile
@@ -1934,6 +2161,10 @@ export default function VideoMeeting({
                       remoteMicOff[
                         socketId
                       ] === true
+                    }
+                    sinkId={
+                      selectedSpeakerId ||
+                      undefined
                     }
                     onClick={() =>
                       toggleExpanded(
@@ -2027,6 +2258,121 @@ export default function VideoMeeting({
 
           </div>
 
+          <div
+            className="
+              mt-3
+              flex
+              flex-col
+              gap-2
+            "
+          >
+
+            <label
+              className="
+                flex
+                flex-col
+                gap-1
+                text-xs
+                text-slate-500
+              "
+            >
+              🎙️ Microfone
+
+              <select
+                value={selectedMicId}
+                onChange={(e) =>
+                  switchMicrophone(
+                    e.target.value
+                  )
+                }
+                className="
+                  rounded-lg
+                  border
+                  border-slate-300
+                  bg-white
+                  px-2
+                  py-1
+                  text-xs
+                  text-slate-700
+                "
+              >
+
+                {audioInputs.map(
+                  (device, index) => (
+
+                    <option
+                      key={
+                        device.deviceId ||
+                        index
+                      }
+                      value={device.deviceId}
+                    >
+                      {device.label ||
+                        `Microfone ${index + 1}`}
+                    </option>
+
+                  )
+                )}
+
+              </select>
+            </label>
+
+            {audioOutputs.length > 0 && (
+
+              <label
+                className="
+                  flex
+                  flex-col
+                  gap-1
+                  text-xs
+                  text-slate-500
+                "
+              >
+                🔊 Alto-falante
+
+                <select
+                  value={selectedSpeakerId}
+                  onChange={(e) =>
+                    setSelectedSpeakerId(
+                      e.target.value
+                    )
+                  }
+                  className="
+                    rounded-lg
+                    border
+                    border-slate-300
+                    bg-white
+                    px-2
+                    py-1
+                    text-xs
+                    text-slate-700
+                  "
+                >
+
+                  {audioOutputs.map(
+                    (device, index) => (
+
+                      <option
+                        key={
+                          device.deviceId ||
+                          index
+                        }
+                        value={device.deviceId}
+                      >
+                        {device.label ||
+                          `Alto-falante ${index + 1}`}
+                      </option>
+
+                    )
+                  )}
+
+                </select>
+              </label>
+
+            )}
+
+          </div>
+
         </div>
 
       )}
@@ -2087,6 +2433,9 @@ export default function VideoMeeting({
                 ? !micOn
                 : expandedId !== null &&
                   remoteMicOff[expandedId] === true
+            }
+            sinkId={
+              selectedSpeakerId || undefined
             }
             onClick={() =>
               setExpandedId(null)

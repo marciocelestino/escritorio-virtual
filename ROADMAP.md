@@ -31,39 +31,35 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
 - **Lugares fixos clicáveis**: cada sala tem assentos numerados de
   verdade; clicar num lugar vazio move o avatar pra lá, sincronizado
   pelo servidor (auto-atribuído ao entrar na sala, liberado ao sair).
-
-## Ainda por fazer
-
-### Ajustes rápidos em recursos existentes
-
-- **Mostrar avatar quando a câmera está desligada**: hoje aparece só a
-  caixa cinza "Câmera desligada" — dá pra mostrar o avatar (foto/emoji)
-  da pessoa no lugar, já que o Meus Dados já guarda isso.
+- **Mostrar avatar quando a câmera está desligada**: no lugar da caixa
+  cinza "Câmera desligada", mostra o avatar (foto/emoji) da pessoa.
 - **Botão "voltar pra chamada"**: quando o dock está tocando uma chamada
   de uma sala diferente da que você está vendo, um atalho rápido pra
   navegar de volta até ela.
-- **Selo de "mutado" também pro próprio usuário**: hoje o selo 🔇 só
-  aparece pros outros participantes verem que você está mutado — o seu
-  próprio card na chamada não mostra isso.
-- **Mover e redimensionar o dock da chamada**: hoje ele é fixo no canto
-  inferior direito com tamanho fixo — dá pra arrastar pra outro canto e
-  ajustar o tamanho, e lembrar a posição/tamanho escolhido.
+- **Selo de "mutado" também pro próprio usuário**: o selo 🔇 agora
+  aparece no seu próprio card na chamada, não só nos dos outros.
+- **Mover e redimensionar o dock da chamada**: dá pra arrastar pela
+  barra de título pra outro canto e ajustar o tamanho pelo canto —
+  posição e tamanho ficam salvos entre sessões.
+- **Mais assentos na Sala de Reunião**: 6 → 15 lugares, em 3 fileiras de
+  5 voltadas pra mesa, no lugar do antigo frente-a-frente.
+- **Remover um usuário da chamada**: botão ❌ ao lado de cada participante
+  remoto — o servidor tira a pessoa da sala de chamada e ela recebe um
+  aviso encerrando a própria câmera/microfone.
+- **Escolher microfone e alto-falante**: seletor de dispositivo de áudio
+  de entrada e saída durante a chamada (troca de alto-falante só
+  funciona em navegadores baseados em Chromium, por depender de
+  `setSinkId`).
+
+## Ainda por fazer
 
 ### Controles de chamada
 
-- **Remover um usuário da chamada**: evento de socket (`kick-from-meeting`)
-  enviado ao socket da pessoa; o servidor a retira da sala de chamada e o
-  cliente dela encerra a própria conexão de vídeo local (mesmo fluxo do
-  "Sair da Chamada").
-- **Escolher dispositivo de entrada/saída de áudio**: selecionar
-  microfone e alto-falante durante a chamada (`enumerateDevices` +
-  `getUserMedia({ audio: { deviceId } })`; troca de alto-falante depende
-  de `setSinkId`, que hoje só funciona em navegadores baseados em
-  Chromium).
 - **Plano de fundo da câmera** (tipo Google Meet): borrar ou trocar o
   fundo da própria câmera. Normalmente feito com segmentação de pessoa
   em tempo real (ex.: bibliotecas de segmentação corporal) desenhando
-  num `<canvas>` antes de enviar o vídeo.
+  num `<canvas>` antes de enviar o vídeo — precisa adicionar uma
+  dependência nova de ML no projeto.
 
 ### Compartilhamento de tela
 

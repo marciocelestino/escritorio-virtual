@@ -12,6 +12,7 @@ import RoomPresence from "@/components/RoomPresence";
 import RoomPulse from "@/components/RoomPulse";
 import StatusSelector from "@/components/StatusSelector";
 import { getSessionUser, getSessionToken } from "@/lib/session";
+import { useMounted } from "@/lib/useMounted";
 import RoomView from "@/components/RoomView";
 import VideoMeeting from "@/components/VideoMeeting";
 import { roomSupportsCall } from "@/lib/rooms";
@@ -213,8 +214,7 @@ function showNotification(
   }, 3000);
 }
 
-  const [mounted, setMounted] =
-    useState(false);
+  const mounted = useMounted();
 
  const [roster, setRoster] =
   useState<UserItem[]>([]);
@@ -253,8 +253,6 @@ function showNotification(
 }, [allUsers]);
 
   useEffect(() => {
-
-  setMounted(true);
 
   const socket =
   getSocket();
@@ -926,12 +924,8 @@ useEffect(() => {
                 modo escuro,
                 gravação de reuniões,
                 cargos e salas restritas por equipe,
-                mover/redimensionar o dock da chamada,
-                selo de mutado também pro próprio usuário,
-                e melhorias na chamada de vídeo
-                (avatar com a câmera desligada,
-                remover usuário da chamada,
-                compartilhamento de tela aprimorado).
+                plano de fundo da câmera,
+                e compartilhamento de tela aprimorado.
               </p>
 
             </div>

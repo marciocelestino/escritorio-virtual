@@ -30,19 +30,10 @@ export type DbUser = {
 function resolveUsersFilePath() {
 
   if (process.env.DATABASE_PATH) {
-    console.log(
-      `[db] Usando DATABASE_PATH definido no ambiente: ${process.env.DATABASE_PATH}`
-    );
     return process.env.DATABASE_PATH;
   }
 
-  const volumeExists = fs.existsSync("/data");
-
-  console.log(
-    `[db] /data existe? ${volumeExists}`
-  );
-
-  if (volumeExists) {
+  if (fs.existsSync("/data")) {
     return path.join("/data", "usuarios.json");
   }
 
@@ -96,10 +87,6 @@ function loadUsers(): DbUser[] {
 
   usersFilePath = resolveUsersFilePath();
 
-  console.log(
-    `[db] Arquivo de usuários: ${usersFilePath}`
-  );
-
   fs.mkdirSync(
     path.dirname(usersFilePath),
     { recursive: true }
@@ -111,19 +98,11 @@ function loadUsers(): DbUser[] {
       fs.readFileSync(usersFilePath, "utf8")
     );
 
-    console.log(
-      `[db] ${cachedUsers?.length ?? 0} usuário(s) carregado(s) de ${usersFilePath}`
-    );
-
   } else {
 
     cachedUsers = seedUsers();
 
     persistUsers();
-
-    console.log(
-      `[db] Arquivo novo — semeado com ${cachedUsers.length} usuário(s) a partir de data/usuarios.json`
-    );
 
   }
 

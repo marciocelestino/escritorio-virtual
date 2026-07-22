@@ -28,21 +28,23 @@ export default function MeetingRoom({
   onSeatClick,
 }: Props) {
 
-  const positions = [
-    { x: 100, y: 80 },
-    { x: 260, y: 80 },
-    { x: 420, y: 80 },
+  // 3 fileiras de 5 lugares (15 ao todo), voltadas pra mesa/tela no topo —
+  // formato "sala de treinamento", em vez do antigo frente-a-frente (que
+  // só cabia 6), pra caber um grupo bem maior.
+  const columns = [80, 220, 360, 500, 640];
 
-    { x: 100, y: 250 },
-    { x: 260, y: 250 },
-    { x: 420, y: 250 },
+  const positions = [
+    ...columns.map((x) => ({ x, y: 130 })),
+    ...columns.map((x) => ({ x, y: 250 })),
+    ...columns.map((x) => ({ x, y: 370 })),
   ];
 
   return (
     <div
       className="
         relative
-        h-[420px]
+        h-[480px]
+        overflow-x-auto
         rounded-2xl
         border
         bg-white
@@ -64,12 +66,11 @@ export default function MeetingRoom({
         className="
           absolute
           left-1/2
-          top-1/2
+          top-[65px]
           flex
-          h-36
-          w-[420px]
+          h-14
+          w-[620px]
           -translate-x-1/2
-          -translate-y-1/2
           items-center
           justify-center
           rounded-xl
@@ -78,7 +79,7 @@ export default function MeetingRoom({
           bg-gradient-to-b
           from-amber-100
           to-amber-200
-          text-xl
+          text-lg
           font-bold
           text-amber-900
           shadow-sm

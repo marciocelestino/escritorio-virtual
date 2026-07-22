@@ -7,6 +7,7 @@ import {
   getSessionUser,
   getSessionToken,
 } from "@/lib/session";
+import { useMounted } from "@/lib/useMounted";
 
 type AdminUser = {
   id: number;
@@ -18,7 +19,7 @@ type AdminUser = {
 export default function AdminPage() {
   const router = useRouter();
 
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [allowed, setAllowed] = useState(false);
   const [currentUserId, setCurrentUserId] =
     useState<number | null>(null);
@@ -54,8 +55,6 @@ export default function AdminPage() {
 
   useEffect(() => {
 
-    setMounted(true);
-
     const user = getSessionUser();
 
     if (!user) {
@@ -64,10 +63,12 @@ export default function AdminPage() {
     }
 
     if (!user.isAdmin) {
-      setAllowed(false);
       return;
     }
 
+    // Só roda uma vez, na checagem de sessão do cliente ao montar a
+    // página — não é um estado que fica sincronizando/recalculando.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCurrentUserId(user.id);
     setAllowed(true);
 
