@@ -26,6 +26,7 @@ type IceCandidatePayload = {
 type Props = {
   room: string;
   autoJoin?: boolean;
+  onNotify?: (message: string) => void;
 };
 
 const ICE_SERVERS = [
@@ -97,6 +98,7 @@ function VideoTile({
 export default function VideoMeeting({
   room,
   autoJoin = false,
+  onNotify,
 }: Props) {
 
   const localStreamRef =
@@ -533,6 +535,16 @@ export default function VideoMeeting({
     setMicOn(track.enabled);
   }
 
+  function muteRemoteParticipant(
+    remoteSocketId: string
+  ) {
+
+    getSocket().emit(
+      "mute-user",
+      { to: remoteSocketId }
+    );
+  }
+
   async function startScreenShare() {
 
     try {
@@ -701,6 +713,30 @@ export default function VideoMeeting({
     socket.on(
       "connect",
       handleReconnect
+    );
+
+    socket.on(
+      "muted-by-someone",
+      ({
+        fromNome,
+      }: {
+        fromNome: string;
+      }) => {
+
+        const track =
+          localStreamRef.current
+            ?.getAudioTracks()[0];
+
+        if (track) {
+          track.enabled = false;
+          setMicOn(false);
+        }
+
+        onNotify?.(
+          `🔇 ${fromNome} mutou seu microfone.`
+        );
+
+      }
     );
 
     socket.on(
@@ -882,6 +918,7 @@ export default function VideoMeeting({
       socket.off("offer");
       socket.off("answer");
       socket.off("ice-candidate");
+      socket.off("muted-by-someone");
       socket.off(
         "connect",
         handleReconnect
@@ -889,6 +926,10 @@ export default function VideoMeeting({
 
     };
 
+    // Registra os listeners do socket uma única vez — onNotify só é usado
+    // dentro do handler de "muted-by-someone" e não precisa disparar um
+    // re-registro a cada render (evitaria duplicar os outros listeners).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const remoteEntries =
@@ -1066,11 +1107,26 @@ export default function VideoMeeting({
                   <p
                     className="
                       mb-3
+                      flex
+                      items-center
+                      justify-between
                       text-sm
                       text-slate-500
                     "
                   >
                     Participante
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        muteRemoteParticipant(
+                          socketId
+                        );
+                      }}
+                      className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-600 hover:bg-slate-200"
+                    >
+                      🔇 Mutar
+                    </button>
                   </p>
 
                   <VideoTile

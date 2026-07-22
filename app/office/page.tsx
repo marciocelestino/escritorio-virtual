@@ -65,6 +65,12 @@ export default function OfficePage() {
   const [notification, setNotification] =
   useState("");
 
+  const [roomInvite, setRoomInvite] =
+  useState<{
+    fromNome: string;
+    room: string;
+  } | null>(null);
+
   // Guarda o estado de presença mais recente pra poder reanunciar ao
   // servidor sempre que o socket reconectar (ex.: depois de uma queda de
   // rede ou um deploy no servidor) — sem isso, o socket volta com um id
@@ -306,6 +312,23 @@ socket.on(
   }
 );
 
+socket.on(
+  "invited-to-room",
+  ({
+    fromNome,
+    room,
+  }: {
+    fromNome: string;
+    room: string;
+  }) => {
+
+    playPingSound();
+
+    setRoomInvite({ fromNome, room });
+
+  }
+);
+
 setCurrentUserId(
   user.id
 );
@@ -480,6 +503,55 @@ useEffect(() => {
           message={notification}
         />
 )}
+
+      {roomInvite && (
+
+        <div
+          className="
+            fixed
+            top-5
+            right-5
+            z-50
+            rounded-xl
+            bg-indigo-600
+            px-5
+            py-4
+            text-white
+            shadow-xl
+          "
+        >
+
+          <p>
+            🔔 {roomInvite.fromNome} te
+            chamou para {roomInvite.room}
+          </p>
+
+          <div className="mt-3 flex gap-2">
+
+            <button
+              onClick={() => {
+                moveToRoom(roomInvite.room);
+                setRoomInvite(null);
+              }}
+              className="rounded-lg bg-white px-3 py-1 text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+            >
+              Ir até lá
+            </button>
+
+            <button
+              onClick={() =>
+                setRoomInvite(null)
+              }
+              className="rounded-lg bg-indigo-500 px-3 py-1 text-sm hover:bg-indigo-400"
+            >
+              Ignorar
+            </button>
+
+          </div>
+
+        </div>
+
+      )}
 
       <Header />
 
@@ -681,6 +753,7 @@ useEffect(() => {
     );
 
   }}
+  onNotify={showNotification}
 />
             </div>
 
@@ -806,6 +879,31 @@ useEffect(() => {
               key={user.id}
               nome={user.nome}
               status={user.status}
+              room={
+                user.room !== currentRoom
+                  ? user.room
+                  : undefined
+              }
+              onInvite={
+                user.id !== currentUserId &&
+                user.room !== currentRoom
+                  ? () => {
+
+                      getSocket().emit(
+                        "invite-to-room",
+                        {
+                          to: user.id,
+                          room: currentRoom,
+                        }
+                      );
+
+                      showNotification(
+                        `Convite enviado para ${user.nome}.`
+                      );
+
+                    }
+                  : undefined
+              }
             />
 
           ))}

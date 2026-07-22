@@ -22,12 +22,14 @@ type Props = {
     userId: number,
     userName: string
   ) => void;
+  onNotify?: (message: string) => void;
 };
 export default function RoomView({
   room,
   users,
   currentUserId,
   onUserClick,
+  onNotify,
 }: Props) {
 
   const roomUsers =
@@ -74,6 +76,7 @@ if (room === "Sala de Reunião") {
       <VideoMeeting
         room={room}
         autoJoin={autoJoinCall}
+        onNotify={onNotify}
       />
     </>
   );
@@ -101,6 +104,7 @@ if (room === "Sala de Reunião") {
       <VideoMeeting
         room={room}
         autoJoin={autoJoinCall}
+        onNotify={onNotify}
       />
     </>
   );

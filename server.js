@@ -197,6 +197,40 @@ app.prepare().then(() => {
       });
     });
 
+    // Pede pra um participante da chamada mutar o próprio microfone. Não
+    // dá pra silenciar a faixa de áudio de outra pessoa à força (WebRTC
+    // não permite isso sem cooperação de quem está enviando) — então isso
+    // é um pedido que o cliente-alvo atende sozinho.
+    socket.on("mute-user", ({ to }) => {
+      const senderId = socketUsers.get(socket.id);
+      const sender = onlineUsers[senderId];
+
+      if (!sender || !to) {
+        return;
+      }
+
+      io.to(to).emit("muted-by-someone", {
+        fromNome: sender.nome,
+      });
+    });
+
+    // Convida um usuário (esteja ele em qual sala estiver) pra vir até a
+    // sala de quem está convidando.
+    socket.on("invite-to-room", ({ to, room }) => {
+      const senderId = socketUsers.get(socket.id);
+      const sender = onlineUsers[senderId];
+      const target = onlineUsers[to];
+
+      if (!sender || !target || !room) {
+        return;
+      }
+
+      io.to(target.socketId).emit("invited-to-room", {
+        fromNome: sender.nome,
+        room,
+      });
+    });
+
     // Sinalização WebRTC em malha, isolada por sala do escritório: cada
     // par de participantes negocia sua própria conexão, endereçada pelo
     // socket id de destino (`to`), em vez de transmitir para toda a sala
