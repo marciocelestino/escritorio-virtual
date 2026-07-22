@@ -7,6 +7,7 @@ type SidebarUser = {
   nome: string;
   room: string;
   online?: boolean;
+  salaNome?: string | null;
 };
 
 type Props = {

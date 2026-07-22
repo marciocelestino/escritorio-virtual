@@ -32,10 +32,27 @@ export default function RoomPresence({
       <h4
         className="
           mb-3
+          flex
+          items-center
+          justify-between
           font-semibold
         "
       >
-        Pessoas nesta sala
+        Nesta Sala
+
+        <span
+          className="
+            rounded-full
+            bg-slate-100
+            px-2
+            py-0.5
+            text-xs
+            font-medium
+            text-slate-500
+          "
+        >
+          {usersInRoom.length}
+        </span>
       </h4>
 
       {usersInRoom.length === 0 && (
@@ -49,16 +66,37 @@ export default function RoomPresence({
         </p>
       )}
 
-      {usersInRoom.map((user) => (
-        <div
-          key={user.id}
-          className="
-            py-1
-          "
-        >
-          👤 {user.nome}
-        </div>
-      ))}
+      <div
+        className="
+          flex
+          max-h-40
+          flex-wrap
+          gap-2
+          overflow-y-auto
+          pr-1
+        "
+      >
+
+        {usersInRoom.map((user) => (
+          <span
+            key={user.id}
+            className="
+              max-w-full
+              truncate
+              rounded-full
+              bg-slate-100
+              px-3
+              py-1
+              text-sm
+              text-slate-700
+            "
+            title={user.nome}
+          >
+            👤 {user.nome}
+          </span>
+        ))}
+
+      </div>
     </div>
   );
 }

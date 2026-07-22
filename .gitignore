@@ -37,6 +37,12 @@ yarn-error.log*
 # vercel
 .vercel
 
+# banco de dados local (dev) — em produção vive num volume do Railway
+/data/app.db
+/data/app.db-journal
+/data/app.db-wal
+/data/app.db-shm
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

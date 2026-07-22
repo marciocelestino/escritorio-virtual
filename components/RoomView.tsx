@@ -10,6 +10,8 @@ type User = {
   room: string;
   status?: string;
   portasAbertas?: boolean;
+  avatarTipo?: string | null;
+  avatarValor?: string | null;
 };
 
 type Props = {

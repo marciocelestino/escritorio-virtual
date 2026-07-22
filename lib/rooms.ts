@@ -8,13 +8,19 @@ export type Room = {
 export const getRooms = () => commonRooms;
 
 export function buildRoomList(
-  users: { id: number; nome: string }[]
+  users: {
+    id: number;
+    nome: string;
+    salaNome?: string | null;
+  }[]
 ): Room[] {
 
   const personalRooms = users.map(
     (user) => ({
       id: `pessoal-${user.id}`,
-      nome: `Espaço ${user.nome}`,
+      nome:
+        user.salaNome ||
+        `Espaço ${user.nome}`,
     })
   );
 

@@ -20,18 +20,20 @@ export function createSessionToken(userId: number) {
   return `${payload}.${signature}`;
 }
 
-export function verifySessionToken(
-  token: string | undefined,
-  userId: number
-) {
+// Verifica a assinatura/validade do token e retorna o id nele embutido,
+// ou null se o token for inválido/expirado/adulterado.
+export function getVerifiedUserId(
+  token: string | null | undefined
+): number | null {
+
   if (!token) {
-    return false;
+    return null;
   }
 
   const parts = token.split(".");
 
   if (parts.length !== 3) {
-    return false;
+    return null;
   }
 
   const [id, expiresAt, signature] = parts;
@@ -42,16 +44,23 @@ export function verifySessionToken(
   const expectedBuffer = Buffer.from(expectedSignature);
 
   if (signatureBuffer.length !== expectedBuffer.length) {
-    return false;
+    return null;
   }
 
   if (!timingSafeEqual(signatureBuffer, expectedBuffer)) {
-    return false;
+    return null;
   }
 
   if (Number(expiresAt) < Date.now()) {
-    return false;
+    return null;
   }
 
-  return Number(id) === userId;
+  return Number(id);
+}
+
+export function verifySessionToken(
+  token: string | undefined,
+  userId: number
+) {
+  return getVerifiedUserId(token) === userId;
 }

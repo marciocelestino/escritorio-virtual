@@ -2,6 +2,8 @@ type Props = {
   nome: string;
   status?: string;
   isCurrentUser: boolean;
+  avatarTipo?: string | null;
+  avatarValor?: string | null;
   x: number;
   y: number;
   onClick: () => void;
@@ -11,6 +13,8 @@ export default function PositionedAvatar({
   nome,
   status = "Disponivel",
   isCurrentUser = false,
+  avatarTipo,
+  avatarValor,
   x,
   y,
   onClick,
@@ -54,6 +58,7 @@ export default function PositionedAvatar({
             w-12
             items-center
             justify-center
+            overflow-hidden
             rounded-full
             text-sm
             font-bold
@@ -67,7 +72,22 @@ export default function PositionedAvatar({
             }
           `}
         >
-          {initials}
+          {avatarTipo === "foto" &&
+          avatarValor ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={avatarValor}
+              alt={nome}
+              className="h-full w-full object-cover"
+            />
+          ) : avatarTipo === "emoji" &&
+            avatarValor ? (
+            <span className="text-xl">
+              {avatarValor}
+            </span>
+          ) : (
+            initials
+          )}
         </div>
 
         <div

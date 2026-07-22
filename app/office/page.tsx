@@ -25,6 +25,10 @@ type UserItem = {
   online?: boolean;
   room: string;
   portasAbertas?: boolean;
+  salaNome?: string | null;
+  avatarTipo?: string | null;
+  avatarValor?: string | null;
+  isAdmin?: boolean;
 };
 
 type LivePresence = {
@@ -639,8 +643,7 @@ useEffect(() => {
               grid
               gap-4
               md:grid-cols-2
-              xl:grid-cols-2
-              2xl:grid-cols-4
+              xl:grid-cols-3
             "
           >
 
@@ -660,7 +663,7 @@ useEffect(() => {
                   text-slate-900
                 "
               >
-                Área da Sala
+                Evolução Futura
               </h4>
 
               <p
@@ -670,11 +673,12 @@ useEffect(() => {
                   text-slate-600
                 "
               >
-                Em breve teremos
-                áudio,
-                webcam,
-                compartilhamento de tela
-                e movimentação em tempo real.
+                Ideias para as próximas fases:
+                responsividade para celular,
+                virar um webapp instalável (PWA),
+                chat de texto,
+                gravação de reuniões
+                e modo escuro.
               </p>
 
             </div>
@@ -708,41 +712,6 @@ useEffect(() => {
                 {onlineUsers.length}
                 {" "}
                 usuários ativos.
-              </p>
-
-            </div>
-
-            <div
-              className="
-                rounded-2xl
-                border
-                bg-white
-                p-5
-                shadow-sm
-              "
-            >
-
-              <h4
-                className="
-                  font-semibold
-                  text-slate-900
-                "
-              >
-                Próxima Etapa
-              </h4>
-
-              <p
-                className="
-                  mt-2
-                  text-sm
-                  text-slate-600
-                "
-              >
-                Cutucar usuários,
-                presença online,
-                áudio,
-                webcam e
-                compartilhamento de tela.
               </p>
 
             </div>

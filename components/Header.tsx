@@ -1,13 +1,19 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
+import MeusDados from "@/components/MeusDados";
 
 export default function Header() {
   const router = useRouter();
 
   const user = getSessionUser();
+
+  const [showMeusDados, setShowMeusDados] =
+    useState(false);
 
   const logout = () => {
     localStorage.removeItem("usuario");
@@ -49,20 +55,24 @@ export default function Header() {
           height={70}
           className="h-10 w-auto"
         />
-
-        <div>
-          <h1 className="text-2xl font-bold">
-            INTERNIT OFFICE
-          </h1>
-
-          <p className="text-xs text-slate-300">
-            Escritório Virtual
-          </p>
-        </div>
       </div>
 
       <div className="flex items-center gap-6">
-        <div className="text-right">
+        {user?.isAdmin && (
+          <Link
+            href="/admin"
+            className="text-sm text-slate-300 hover:text-white"
+          >
+            Administração
+          </Link>
+        )}
+
+        <button
+          onClick={() =>
+            setShowMeusDados(true)
+          }
+          className="text-right hover:opacity-80"
+        >
           <div>
             👤 {user?.nome}
           </div>
@@ -70,7 +80,7 @@ export default function Header() {
           <div className="text-sm text-slate-300">
             {emoji} {status || "Disponível"}
           </div>
-        </div>
+        </button>
 
         <button
           onClick={logout}
@@ -86,6 +96,14 @@ export default function Header() {
           Sair
         </button>
       </div>
+
+      {showMeusDados && (
+        <MeusDados
+          onClose={() =>
+            setShowMeusDados(false)
+          }
+        />
+      )}
     </header>
   );
 }

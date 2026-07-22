@@ -5,6 +5,8 @@ type User = {
   nome: string;
   room: string;
   status?: string;
+  avatarTipo?: string | null;
+  avatarValor?: string | null;
 };
 
 type Props = {
@@ -138,6 +140,8 @@ export default function NatureRoom({
       isCurrentUser={
         user.id === currentUserId
       }
+      avatarTipo={user.avatarTipo}
+      avatarValor={user.avatarValor}
       x={pos.x}
       y={pos.y}
       onClick={() =>
