@@ -13,6 +13,10 @@ function getAudioContext() {
   return sharedContext;
 }
 
+const REPEAT_COUNT = 3;
+const NOTE_DURATION = 0.15;
+const PATTERN_GAP = 0.15;
+
 export function playPingSound() {
 
   const context = getAudioContext();
@@ -23,26 +27,57 @@ export function playPingSound() {
 
   const now = context.currentTime;
 
-  [880, 660].forEach((frequency, index) => {
+  const patternDuration =
+    [880, 660].length * NOTE_DURATION +
+    PATTERN_GAP;
 
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
+  for (
+    let repeat = 0;
+    repeat < REPEAT_COUNT;
+    repeat++
+  ) {
 
-    oscillator.type = "sine";
-    oscillator.frequency.value = frequency;
+    const patternStart =
+      now + repeat * patternDuration;
 
-    const start = now + index * 0.15;
-    const end = start + 0.15;
+    [880, 660].forEach((frequency, index) => {
 
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.3, start + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, end);
+      const oscillator =
+        context.createOscillator();
 
-    oscillator.connect(gain);
-    gain.connect(context.destination);
+      const gain = context.createGain();
 
-    oscillator.start(start);
-    oscillator.stop(end);
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
 
-  });
+      const start =
+        patternStart +
+        index * NOTE_DURATION;
+
+      const end = start + NOTE_DURATION;
+
+      gain.gain.setValueAtTime(
+        0.0001,
+        start
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.3,
+        start + 0.02
+      );
+
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        end
+      );
+
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+
+      oscillator.start(start);
+      oscillator.stop(end);
+
+    });
+
+  }
 }

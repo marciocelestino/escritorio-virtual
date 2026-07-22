@@ -55,12 +55,8 @@ export default function LoginPage() {
           />
 
           <h1 className="text-2xl font-bold">
-            INTERNIT OFFICE
+            ENTRE, a Casa é Sua!
           </h1>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Escritório Virtual
-          </p>
         </div>
 
         <input

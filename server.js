@@ -3,6 +3,17 @@ const { createHmac, timingSafeEqual } = require("crypto");
 const next = require("next");
 const { Server } = require("socket.io");
 
+// Sem isso, qualquer erro não tratado (ex.: numa promise de um handler de
+// socket) derruba o processo inteiro e o Railway fica reiniciando em loop
+// sem deixar rastro do motivo real no log.
+process.on("uncaughtException", (error) => {
+  console.error("Erro não tratado (uncaughtException):", error);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Promise rejeitada sem tratamento (unhandledRejection):", reason);
+});
+
 const dev = process.env.NODE_ENV !== "production";
 
 const hostname = "0.0.0.0";

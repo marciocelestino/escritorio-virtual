@@ -105,7 +105,12 @@ function getDb() {
     timeout: 5000,
   });
 
-  db.pragma("journal_mode = WAL");
+  // Modo WAL exige mmap/locking de memória compartilhada que nem todo
+  // volume de rede/bind-mount suporta direito — em produção (Railway)
+  // isso derrubava o processo inteiro (crash loop, sem nem aparecer erro
+  // no log, típico de um segfault nativo). O modo padrão (DELETE) é mais
+  // lento sob concorrência pesada, mas muito mais compatível.
+  db.pragma("journal_mode = DELETE");
   db.pragma("busy_timeout = 5000");
 
   db.exec(`

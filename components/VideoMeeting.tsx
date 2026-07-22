@@ -32,10 +32,16 @@ const ICE_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
 ];
 
-function RemoteVideo({
+function VideoTile({
   stream,
+  muted = false,
+  large = false,
+  onClick,
 }: {
   stream: MediaStream;
+  muted?: boolean;
+  large?: boolean;
+  onClick?: () => void;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
 
@@ -50,45 +56,35 @@ function RemoteVideo({
       ref={ref}
       autoPlay
       playsInline
-      className="
-        w-full
-        max-w-md
-        rounded-xl
-        border
-      "
+      muted={muted}
+      onClick={onClick}
+      className={
+        large
+          ? `
+            max-h-[65vh]
+            w-full
+            rounded-xl
+            border
+            bg-black
+            object-contain
+          `
+          : `
+            w-full
+            max-w-md
+            cursor-pointer
+            rounded-xl
+            border
+            object-cover
+          `
+      }
     />
   );
-}
-
-function replaceOutgoingVideoTrack(
-  peers: Map<string, RTCPeerConnection>,
-  track: MediaStreamTrack | null
-) {
-
-  if (!track) {
-    return;
-  }
-
-  peers.forEach((peer) => {
-
-    const sender = peer
-      .getSenders()
-      .find(
-        (s) => s.track?.kind === "video"
-      );
-
-    sender?.replaceTrack(track);
-
-  });
 }
 
 export default function VideoMeeting({
   room,
   autoJoin = false,
 }: Props) {
-
-  const videoRef =
-    useRef<HTMLVideoElement>(null);
 
   const localStreamRef =
     useRef<MediaStream | null>(null);
@@ -98,6 +94,14 @@ export default function VideoMeeting({
 
   const peersRef =
     useRef<Map<string, RTCPeerConnection>>(
+      new Map()
+    );
+
+  // Guarda o sender de vídeo já criado por participante — permite trocar
+  // o que está sendo enviado (câmera ↔ tela ↔ nada) com replaceTrack, sem
+  // precisar renegociar de novo a cada troca.
+  const videoSendersRef =
+    useRef<Map<string, RTCRtpSender>>(
       new Map()
     );
 
@@ -124,6 +128,9 @@ export default function VideoMeeting({
   const [autoJoined, setAutoJoined] =
     useState(false);
 
+  const [expandedId, setExpandedId] =
+    useState<string | null>(null);
+
   const [
     remoteStreams,
     setRemoteStreams,
@@ -147,11 +154,21 @@ export default function VideoMeeting({
       );
     }
 
+    videoSendersRef.current.delete(
+      remoteSocketId
+    );
+
     setRemoteStreams((prev) => {
       const next = { ...prev };
       delete next[remoteSocketId];
       return next;
     });
+
+    setExpandedId((current) =>
+      current === remoteSocketId
+        ? null
+        : current
+    );
   }
 
   function createPeerConnection(
@@ -195,10 +212,19 @@ export default function VideoMeeting({
       localStream
         .getTracks()
         .forEach((track) => {
-          peer.addTrack(
+
+          const sender = peer.addTrack(
             track,
             localStream
           );
+
+          if (track.kind === "video") {
+            videoSendersRef.current.set(
+              remoteSocketId,
+              sender
+            );
+          }
+
         });
     }
 
@@ -208,6 +234,68 @@ export default function VideoMeeting({
     );
 
     return peer;
+  }
+
+  // Envia uma faixa de vídeo (câmera ou tela) para um participante: reusa
+  // o sender já existente com replaceTrack (não precisa renegociar) ou,
+  // se ainda não existir nenhum sender de vídeo com esse participante
+  // (ex.: quem entrou só com áudio via portas abertas), cria um novo e
+  // renegocia a conexão.
+  async function sendVideoTrackToPeer(
+    remoteId: string,
+    peer: RTCPeerConnection,
+    track: MediaStreamTrack
+  ) {
+
+    const existingSender =
+      videoSendersRef.current.get(
+        remoteId
+      );
+
+    if (existingSender) {
+      await existingSender.replaceTrack(
+        track
+      );
+      return;
+    }
+
+    const sender = peer.addTrack(
+      track,
+      localStreamRef.current ??
+        new MediaStream([track])
+    );
+
+    videoSendersRef.current.set(
+      remoteId,
+      sender
+    );
+
+    try {
+
+      const offer =
+        await peer.createOffer();
+
+      await peer.setLocalDescription(
+        offer
+      );
+
+      getSocket().emit(
+        "offer",
+        {
+          to: remoteId,
+          offer,
+        }
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Erro ao renegociar vídeo com",
+        remoteId,
+        error
+      );
+
+    }
   }
 
   function stopAllTracks() {
@@ -239,8 +327,10 @@ export default function VideoMeeting({
     );
 
     peersRef.current.clear();
+    videoSendersRef.current.clear();
 
     setRemoteStreams({});
+    setExpandedId(null);
 
     stopAllTracks();
 
@@ -342,40 +432,15 @@ export default function VideoMeeting({
         peer,
       ] of peersRef.current.entries()) {
 
-        peer.addTrack(
-          videoTrack,
-          localStream
+        await sendVideoTrackToPeer(
+          remoteId,
+          peer,
+          videoTrack
         );
-
-        try {
-
-          const offer =
-            await peer.createOffer();
-
-          await peer.setLocalDescription(
-            offer
-          );
-
-          getSocket().emit(
-            "offer",
-            {
-              to: remoteId,
-              offer,
-            }
-          );
-
-        } catch (error) {
-
-          console.error(
-            "Erro ao renegociar vídeo com",
-            remoteId,
-            error
-          );
-
-        }
 
       }
 
+      setStream(localStream);
       setCameraOn(true);
 
     } catch (error) {
@@ -394,18 +459,39 @@ export default function VideoMeeting({
 
   function toggleCamera() {
 
-    const track =
-      localStreamRef.current
-        ?.getVideoTracks()[0];
+    const localStream =
+      localStreamRef.current;
 
-    if (!track) {
-      enableCamera();
+    const track =
+      localStream?.getVideoTracks()[0];
+
+    if (track) {
+
+      // Desliga de verdade (para a captura) — só marcar enabled=false
+      // mantém a câmera acesa fisicamente (a luz do notebook continua
+      // ligada) mesmo sem enviar imagem para ninguém.
+      track.stop();
+
+      localStream?.removeTrack(track);
+
+      videoSendersRef.current.forEach(
+        (sender) => {
+          sender.replaceTrack(null);
+        }
+      );
+
+      setCameraOn(false);
+
+      setExpandedId((current) =>
+        current === "local"
+          ? null
+          : current
+      );
+
       return;
     }
 
-    track.enabled = !track.enabled;
-
-    setCameraOn(track.enabled);
+    enableCamera();
   }
 
   function toggleMic() {
@@ -438,10 +524,18 @@ export default function VideoMeeting({
       screenStreamRef.current =
         screenStream;
 
-      replaceOutgoingVideoTrack(
-        peersRef.current,
-        screenTrack
-      );
+      for (const [
+        remoteId,
+        peer,
+      ] of peersRef.current.entries()) {
+
+        await sendVideoTrackToPeer(
+          remoteId,
+          peer,
+          screenTrack
+        );
+
+      }
 
       screenTrack.onended = () => {
         stopScreenShare();
@@ -466,9 +560,12 @@ export default function VideoMeeting({
         ?.getVideoTracks()[0] ??
       null;
 
-    replaceOutgoingVideoTrack(
-      peersRef.current,
-      cameraTrack
+    videoSendersRef.current.forEach(
+      (sender) => {
+        sender.replaceTrack(
+          cameraTrack
+        );
+      }
     );
 
     screenStreamRef.current
@@ -491,22 +588,12 @@ export default function VideoMeeting({
     }
   }
 
-  useEffect(() => {
+  function toggleExpanded(id: string) {
 
-    if (
-      stream &&
-      videoRef.current
-    ) {
-
-      videoRef.current.srcObject =
-        stream;
-
-    }
-
-    // cameraOn também entra nas deps: a prévia da câmera desmonta/remonta
-    // quando ela é ligada depois (fluxo de portas abertas), e o elemento
-    // de vídeo novo precisa receber o srcObject de novo.
-  }, [stream, cameraOn]);
+    setExpandedId((current) =>
+      current === id ? null : id
+    );
+  }
 
   // "Portas abertas": conecta áudio automaticamente (sem vídeo) quando o
   // colega presente na sala também está de portas abertas — sem pedir
@@ -726,6 +813,13 @@ export default function VideoMeeting({
   const remoteEntries =
     Object.entries(remoteStreams);
 
+  const expandedStream =
+    expandedId === "local"
+      ? stream
+      : expandedId
+      ? remoteStreams[expandedId]
+      : null;
+
   return (
 
     <div
@@ -779,6 +873,36 @@ export default function VideoMeeting({
 
         <div>
 
+          {expandedStream && (
+
+            <div className="mb-4">
+
+              <VideoTile
+                stream={expandedStream}
+                muted={expandedId === "local"}
+                large
+                onClick={() =>
+                  setExpandedId(null)
+                }
+              />
+
+              <button
+                onClick={() =>
+                  setExpandedId(null)
+                }
+                className="mt-2 text-sm text-blue-600 hover:underline"
+              >
+                ↙️ Ver em grade
+              </button>
+
+            </div>
+
+          )}
+
+          <p className="mb-2 text-xs text-slate-400">
+            Clique em um vídeo para ver maior.
+          </p>
+
           <div
             className="
               grid
@@ -804,19 +928,14 @@ export default function VideoMeeting({
                   " (compartilhando tela)"}
               </p>
 
-              {cameraOn ? (
+              {cameraOn && stream ? (
 
-                <video
-                  ref={videoRef}
-                  autoPlay
-                  playsInline
+                <VideoTile
+                  stream={stream}
                   muted
-                  className="
-                    w-full
-                    max-w-md
-                    rounded-xl
-                    border
-                  "
+                  onClick={() =>
+                    toggleExpanded("local")
+                  }
                 />
 
               ) : (
@@ -858,8 +977,13 @@ export default function VideoMeeting({
                     Participante
                   </p>
 
-                  <RemoteVideo
+                  <VideoTile
                     stream={remoteStream}
+                    onClick={() =>
+                      toggleExpanded(
+                        socketId
+                      )
+                    }
                   />
 
                 </div>
