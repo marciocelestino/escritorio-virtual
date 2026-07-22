@@ -71,7 +71,11 @@ export default function LoginPage() {
             w-full
             rounded-lg
             border
+            border-slate-300
+            bg-white
             p-3
+            text-slate-900
+            placeholder:text-slate-400
           "
         />
 
@@ -87,7 +91,11 @@ export default function LoginPage() {
             w-full
             rounded-lg
             border
+            border-slate-300
+            bg-white
             p-3
+            text-slate-900
+            placeholder:text-slate-400
           "
         />
 

@@ -257,7 +257,7 @@ export default function AdminPage() {
               value={nome}
               onChange={(e) => setNome(e.target.value)}
               required
-              className="rounded-lg border p-2"
+              className="rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
             />
 
             <input
@@ -266,7 +266,7 @@ export default function AdminPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="rounded-lg border p-2"
+              className="rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
             />
 
             <input
@@ -275,7 +275,7 @@ export default function AdminPage() {
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
               required
-              className="rounded-lg border p-2"
+              className="rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
             />
 
             <button

@@ -271,7 +271,7 @@ export default function MeusDados({
                 setNome(e.target.value)
               }
               required
-              className="w-full rounded-lg border p-2"
+              className="w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
             />
           </div>
 
@@ -287,7 +287,7 @@ export default function MeusDados({
                 setEmail(e.target.value)
               }
               required
-              className="w-full rounded-lg border p-2"
+              className="w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
             />
           </div>
 
@@ -303,7 +303,7 @@ export default function MeusDados({
                 setSalaNome(e.target.value)
               }
               placeholder={`Espaço ${nome}`}
-              className="w-full rounded-lg border p-2"
+              className="w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
             />
           </div>
 
@@ -370,7 +370,7 @@ export default function MeusDados({
               type="file"
               accept="image/*"
               onChange={handleFotoChange}
-              className="mb-3 block w-full text-sm"
+              className="mb-3 block w-full text-sm text-slate-700"
             />
 
             <label className="mb-2 block text-sm text-slate-600">
@@ -409,7 +409,7 @@ export default function MeusDados({
             </div>
           </div>
 
-          <details className="rounded-lg border p-3">
+          <details className="rounded-lg border border-slate-300 p-3">
             <summary className="cursor-pointer text-sm font-medium text-slate-700">
               Trocar senha
             </summary>
@@ -422,7 +422,7 @@ export default function MeusDados({
                 onChange={(e) =>
                   setSenhaAtual(e.target.value)
                 }
-                className="w-full rounded-lg border p-2"
+                className="w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
               />
 
               <input
@@ -432,7 +432,7 @@ export default function MeusDados({
                 onChange={(e) =>
                   setNovaSenha(e.target.value)
                 }
-                className="w-full rounded-lg border p-2"
+                className="w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
               />
 
               <input
@@ -444,7 +444,7 @@ export default function MeusDados({
                     e.target.value
                   )
                 }
-                className="w-full rounded-lg border p-2"
+                className="w-full rounded-lg border border-slate-300 bg-white p-2 text-slate-900 placeholder:text-slate-400"
               />
             </div>
           </details>
