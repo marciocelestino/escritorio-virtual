@@ -9,10 +9,19 @@ import Database from "better-sqlite3";
 function resolveDbPath() {
 
   if (process.env.DATABASE_PATH) {
+    console.log(
+      `[db] Usando DATABASE_PATH definido no ambiente: ${process.env.DATABASE_PATH}`
+    );
     return process.env.DATABASE_PATH;
   }
 
-  if (fs.existsSync("/data")) {
+  const volumeExists = fs.existsSync("/data");
+
+  console.log(
+    `[db] /data existe? ${volumeExists}`
+  );
+
+  if (volumeExists) {
     return path.join("/data", "app.db");
   }
 
@@ -27,6 +36,10 @@ function seedFromJsonIfEmpty(
     .prepare("SELECT COUNT(*) as count FROM users")
     .get() as { count: number };
 
+  console.log(
+    `[db] Usuários já existentes na tabela: ${count}`
+  );
+
   if (count > 0) {
     return;
   }
@@ -37,7 +50,14 @@ function seedFromJsonIfEmpty(
     "usuarios.json"
   );
 
-  if (!fs.existsSync(seedPath)) {
+  const seedFileExists =
+    fs.existsSync(seedPath);
+
+  console.log(
+    `[db] Arquivo de seed (${seedPath}) existe? ${seedFileExists}`
+  );
+
+  if (!seedFileExists) {
     return;
   }
 
@@ -96,6 +116,10 @@ function getDb() {
   }
 
   const dbPath = resolveDbPath();
+
+  console.log(
+    `[db] Abrindo banco em: ${dbPath}`
+  );
 
   fs.mkdirSync(path.dirname(dbPath), {
     recursive: true,

@@ -15,6 +15,10 @@ export async function POST(req: Request) {
       user.senhaHash
     ));
 
+  console.log(
+    `[login] tentativa para "${body.email}" — usuário encontrado? ${Boolean(user)} — senha válida? ${Boolean(senhaValida)}`
+  );
+
   if (!user || !senhaValida) {
     return NextResponse.json(
       { success: false },
