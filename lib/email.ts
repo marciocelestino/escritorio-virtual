@@ -6,6 +6,22 @@ const FROM_EMAIL =
 
 let resendClient: Resend | null = null;
 
+// Diagnóstico que não expõe o segredo: só mostra se a variável existe, o
+// tamanho e os primeiros caracteres — o suficiente pra saber se o valor
+// salvo no Railway é o esperado (ex.: sem o nome da variável duplicado
+// dentro do próprio valor, sem espaços/aspas sobrando etc.).
+const apiKey = process.env.RESEND_API_KEY;
+
+console.log(
+  `[email] RESEND_API_KEY presente? ${Boolean(
+    apiKey
+  )} — tamanho: ${
+    apiKey?.length ?? 0
+  } — início: "${
+    apiKey?.slice(0, 6) ?? ""
+  }..." — RESEND_FROM_EMAIL: "${FROM_EMAIL}"`
+);
+
 function getResendClient() {
 
   if (!process.env.RESEND_API_KEY) {

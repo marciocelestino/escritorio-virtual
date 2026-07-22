@@ -121,6 +121,12 @@ export default function VideoMeeting({
   const joiningRef =
     useRef(false);
 
+  const joinedRef =
+    useRef(false);
+
+  const roomRef =
+    useRef(room);
+
   const expandedVideoRef =
     useRef<HTMLVideoElement | null>(
       null
@@ -654,9 +660,48 @@ export default function VideoMeeting({
   }, [room]);
 
   useEffect(() => {
+    joinedRef.current = joined;
+  }, [joined]);
+
+  useEffect(() => {
+    roomRef.current = room;
+  }, [room]);
+
+  useEffect(() => {
 
     const socket =
       getSocket();
+
+    // Se a conexão cair e voltar (deploy no servidor, queda de rede etc.)
+    // enquanto estávamos numa chamada, as conexões antigas ficam órfãs —
+    // o servidor não sabe mais quem éramos. Em vez de ficar "mudo" até
+    // recarregar a página, entra de novo do zero na chamada da sala atual.
+    function handleReconnect() {
+
+      if (!joinedRef.current) {
+        return;
+      }
+
+      peersRef.current.forEach(
+        (peer) => peer.close()
+      );
+
+      peersRef.current.clear();
+      videoSendersRef.current.clear();
+
+      setRemoteStreams({});
+
+      socket.emit(
+        "join-meeting",
+        { room: roomRef.current }
+      );
+
+    }
+
+    socket.on(
+      "connect",
+      handleReconnect
+    );
 
     socket.on(
       "existing-participants",
@@ -837,6 +882,10 @@ export default function VideoMeeting({
       socket.off("offer");
       socket.off("answer");
       socket.off("ice-candidate");
+      socket.off(
+        "connect",
+        handleReconnect
+      );
 
     };
 

@@ -2,7 +2,7 @@
 import { getSocket }
 from "@/lib/socket";
 import Notification from "@/components/Notification";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Header from "@/components/Header";
@@ -64,6 +64,21 @@ export default function OfficePage() {
 
   const [notification, setNotification] =
   useState("");
+
+  // Guarda o estado de presença mais recente pra poder reanunciar ao
+  // servidor sempre que o socket reconectar (ex.: depois de uma queda de
+  // rede ou um deploy no servidor) — sem isso, o socket volta com um id
+  // novo que o servidor não associa a nenhum usuário, e toda troca de
+  // sala/status/portas passa a ser rejeitada silenciosamente até a
+  // pessoa recarregar a página.
+  const presenceRef = useRef({
+    room: "Recepção",
+    status: "Disponivel" as
+      | "Disponivel"
+      | "Ausente"
+      | "Reuniao",
+    portasAbertas: false,
+  });
 
 function moveToRoom(
   room: string
@@ -202,27 +217,50 @@ fetch("/api/users")
     localStorage.getItem("portasAbertas") ===
     "true";
 
-socket.emit(
-  "user-connected",
-  {
-    id: user.id,
-    nome: user.nome,
+  presenceRef.current = {
     room: currentRoom,
     status: initialStatus,
     portasAbertas: initialPortasAbertas,
-    token: getSessionToken(),
+  };
+
+  function announcePresence() {
+
+    socket.emit(
+      "user-connected",
+      {
+        id: user.id,
+        nome: user.nome,
+        room: presenceRef.current.room,
+        status: presenceRef.current.status,
+        portasAbertas:
+          presenceRef.current
+            .portasAbertas,
+        token: getSessionToken(),
+      }
+    );
+
   }
-);
 
 socket.on(
   "connect",
   () => {
+
     console.log(
       "Socket conectado:",
       socket.id
     );
+
+    // Também roda em reconexões (não só na primeira vez) — sem isso, o
+    // servidor não reassocia o socket novo ao usuário, e room-change/
+    // status-change passam a ser rejeitados até a página ser recarregada.
+    announcePresence();
+
   }
 );
+
+if (socket.connected) {
+  announcePresence();
+}
 
 socket.on(
   "presence-update",
@@ -280,6 +318,16 @@ setCurrentUserId(
   // socket a cada troca de sala, duplicando-os.
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [router]);
+
+  useEffect(() => {
+
+    presenceRef.current = {
+      room: currentRoom,
+      status,
+      portasAbertas,
+    };
+
+  }, [currentRoom, status, portasAbertas]);
 
   useEffect(() => {
 
