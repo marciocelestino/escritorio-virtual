@@ -9,6 +9,7 @@ type User = {
   nome: string;
   room: string;
   status?: string;
+  portasAbertas?: boolean;
 };
 
 type Props = {
@@ -16,6 +17,7 @@ type Props = {
   users: User[];
   currentUserId: number;
   onUserClick: (
+    userId: number,
     userName: string
   ) => void;
 };
@@ -30,6 +32,23 @@ export default function RoomView({
     users.filter(
       (user) => user.room === room
     );
+
+  const myselfInRoom =
+    roomUsers.find(
+      (user) => user.id === currentUserId
+    );
+
+  const someoneElseWithOpenDoor =
+    roomUsers.some(
+      (user) =>
+        user.id !== currentUserId &&
+        user.portasAbertas
+    );
+
+  const autoJoinCall = Boolean(
+    myselfInRoom?.portasAbertas &&
+      someoneElseWithOpenDoor
+  );
 
   if (room === "Recepção") {
     return (
@@ -50,7 +69,10 @@ if (room === "Sala de Reunião") {
         onUserClick={onUserClick}
       />
 
-      <VideoMeeting room={room} />
+      <VideoMeeting
+        room={room}
+        autoJoin={autoJoinCall}
+      />
     </>
   );
 }
@@ -74,7 +96,10 @@ if (room === "Sala de Reunião") {
         onUserClick={onUserClick}
       />
 
-      <VideoMeeting room={room} />
+      <VideoMeeting
+        room={room}
+        autoJoin={autoJoinCall}
+      />
     </>
   );
 }

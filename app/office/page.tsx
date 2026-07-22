@@ -12,6 +12,7 @@ import RoomPresence from "@/components/RoomPresence";
 import StatusSelector from "@/components/StatusSelector";
 import { getSessionUser, getSessionToken } from "@/lib/session";
 import RoomView from "@/components/RoomView";
+import { playPingSound } from "@/lib/sound";
 
 type UserItem = {
   id: number;
@@ -23,6 +24,7 @@ type UserItem = {
     | "Reuniao";
   online?: boolean;
   room: string;
+  portasAbertas?: boolean;
 };
 
 type LivePresence = {
@@ -31,6 +33,7 @@ type LivePresence = {
     | "Disponivel"
     | "Ausente"
     | "Reuniao";
+  portasAbertas?: boolean;
 };
 
 export default function OfficePage() {
@@ -51,6 +54,9 @@ export default function OfficePage() {
 
     const [currentUserId, setCurrentUserId] =
   useState<number | null>(null);
+
+  const [portasAbertas, setPortasAbertas] =
+  useState(false);
 
   const [notification, setNotification] =
   useState("");
@@ -137,6 +143,7 @@ function showNotification(
         ...user,
         room: live.room,
         status: live.status,
+        portasAbertas: live.portasAbertas,
         online: true,
       };
     });
@@ -187,6 +194,10 @@ fetch("/api/users")
       ? savedStatus
       : "Disponivel";
 
+  const initialPortasAbertas =
+    localStorage.getItem("portasAbertas") ===
+    "true";
+
 socket.emit(
   "user-connected",
   {
@@ -194,6 +205,7 @@ socket.emit(
     nome: user.nome,
     room: currentRoom,
     status: initialStatus,
+    portasAbertas: initialPortasAbertas,
     token: getSessionToken(),
   }
 );
@@ -214,6 +226,7 @@ socket.on(
     id: number;
     room: string;
     status?: LivePresence["status"];
+    portasAbertas?: boolean;
   }>) => {
 
     const map: Record<
@@ -225,10 +238,28 @@ socket.on(
       map[liveUser.id] = {
         room: liveUser.room,
         status: liveUser.status,
+        portasAbertas: liveUser.portasAbertas,
       };
     });
 
     setLiveUsers(map);
+
+  }
+);
+
+socket.on(
+  "poked",
+  ({
+    fromNome,
+  }: {
+    fromNome: string;
+  }) => {
+
+    playPingSound();
+
+    showNotification(
+      `🔔 ${fromNome} quer falar com você!`
+    );
 
   }
 );
@@ -238,6 +269,7 @@ setCurrentUserId(
 );
 
   setStatus(initialStatus);
+  setPortasAbertas(initialPortasAbertas);
 
   // Conecta o socket uma única vez, no valor de currentRoom no momento da
   // montagem — incluir currentRoom nas deps re-registraria os listeners do
@@ -271,6 +303,33 @@ setCurrentUserId(
     );
 
   }, [status, currentUserId, mounted]);
+
+  useEffect(() => {
+
+    if (!mounted) return;
+
+    localStorage.setItem(
+      "portasAbertas",
+      String(portasAbertas)
+    );
+
+  }, [portasAbertas, mounted]);
+
+  useEffect(() => {
+
+    if (!mounted || !currentUserId) return;
+
+    const socket = getSocket();
+
+    socket.emit(
+      "door-toggle",
+      {
+        userId: currentUserId,
+        aberta: portasAbertas,
+      }
+    );
+
+  }, [portasAbertas, currentUserId, mounted]);
 
   useEffect(() => {
 
@@ -445,6 +504,32 @@ useEffect(() => {
                 setStatus={setStatus}
               />
 
+              <button
+                onClick={() =>
+                  setPortasAbertas(
+                    (prev) => !prev
+                  )
+                }
+                title="Quando ligado, colegas que também estiverem com as portas abertas na mesma sala conectam áudio automaticamente com você, sem precisar clicar em Entrar na Chamada."
+                className={`
+                  rounded-lg
+                  border
+                  px-3
+                  py-2
+                  text-sm
+                  font-medium
+                  ${
+                    portasAbertas
+                      ? "border-green-300 bg-green-100 text-green-800"
+                      : "border-slate-300 bg-slate-100 text-slate-600"
+                  }
+                `}
+              >
+                {portasAbertas
+                  ? "🚪 Portas abertas"
+                  : "🚪 Portas fechadas"}
+              </button>
+
             </div>
 
           </div>
@@ -532,11 +617,18 @@ useEffect(() => {
   room={currentRoom}
   users={onlineUsers}
   currentUserId={currentUserId ?? 0}
-  onUserClick={(name) =>
+  onUserClick={(userId, name) => {
+
+    getSocket().emit(
+      "poke",
+      { to: userId }
+    );
+
     showNotification(
       `Você chamou ${name}`
-    )
-  }
+    );
+
+  }}
 />
             </div>
 

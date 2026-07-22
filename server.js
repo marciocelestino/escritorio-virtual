@@ -108,6 +108,7 @@ app.prepare().then(() => {
         nome: user.nome,
         room: user.room,
         status: user.status,
+        portasAbertas: Boolean(user.portasAbertas),
         socketId: socket.id,
       };
 
@@ -148,6 +149,41 @@ app.prepare().then(() => {
 
         io.emit("presence-update", Object.values(onlineUsers));
       }
+    });
+
+    socket.on("door-toggle", ({ userId, aberta }) => {
+      if (socketUsers.get(socket.id) !== userId) {
+        console.warn(
+          "Mudança de portas abertas rejeitada: socket não corresponde ao usuário",
+          userId
+        );
+        return;
+      }
+
+      if (onlineUsers[userId]) {
+        onlineUsers[userId].portasAbertas = Boolean(aberta);
+
+        io.emit("presence-update", Object.values(onlineUsers));
+      }
+    });
+
+    // "Cutucar": avisa um usuário específico, esteja ele em qual sala
+    // estiver, com um som e uma notificação — o nome de quem chamou vem
+    // do registro do servidor, nunca do payload do cliente, para não
+    // permitir que alguém se passe por outra pessoa.
+    socket.on("poke", ({ to }) => {
+      const senderId = socketUsers.get(socket.id);
+      const sender = onlineUsers[senderId];
+      const target = onlineUsers[to];
+
+      if (!sender || !target) {
+        return;
+      }
+
+      io.to(target.socketId).emit("poked", {
+        fromId: sender.id,
+        fromNome: sender.nome,
+      });
     });
 
     // Sinalização WebRTC em malha, isolada por sala do escritório: cada

@@ -25,6 +25,7 @@ type IceCandidatePayload = {
 
 type Props = {
   room: string;
+  autoJoin?: boolean;
 };
 
 const ICE_SERVERS = [
@@ -83,6 +84,7 @@ function replaceOutgoingVideoTrack(
 
 export default function VideoMeeting({
   room,
+  autoJoin = false,
 }: Props) {
 
   const videoRef =
@@ -99,6 +101,9 @@ export default function VideoMeeting({
       new Map()
     );
 
+  const joiningRef =
+    useRef(false);
+
   const [joined, setJoined] =
     useState(false);
 
@@ -114,6 +119,9 @@ export default function VideoMeeting({
     useState(true);
 
   const [sharingScreen, setSharingScreen] =
+    useState(false);
+
+  const [autoJoined, setAutoJoined] =
     useState(false);
 
   const [
@@ -239,17 +247,31 @@ export default function VideoMeeting({
     setStream(null);
     setJoined(false);
     setSharingScreen(false);
+    setAutoJoined(false);
     setCameraOn(true);
     setMicOn(true);
+
+    joiningRef.current = false;
   }
 
-  async function joinMeeting() {
+  async function joinMeeting(
+    options: { audioOnly?: boolean } = {}
+  ) {
+
+    if (
+      joiningRef.current ||
+      joined
+    ) {
+      return;
+    }
+
+    joiningRef.current = true;
 
     try {
 
       const mediaStream =
         await navigator.mediaDevices.getUserMedia({
-          video: true,
+          video: !options.audioOnly,
           audio: true,
         });
 
@@ -257,8 +279,11 @@ export default function VideoMeeting({
         mediaStream;
 
       setStream(mediaStream);
-      setCameraOn(true);
+      setCameraOn(!options.audioOnly);
       setMicOn(true);
+      setAutoJoined(
+        Boolean(options.audioOnly)
+      );
       setJoined(true);
 
       const socket =
@@ -272,13 +297,98 @@ export default function VideoMeeting({
     } catch (error) {
 
       console.error(
-        "Erro ao acessar câmera:",
+        "Erro ao acessar câmera/microfone:",
+        error
+      );
+
+      if (!options.audioOnly) {
+        alert(
+          "Não foi possível acessar câmera ou microfone."
+        );
+      }
+
+    } finally {
+
+      joiningRef.current = false;
+
+    }
+  }
+
+  async function enableCamera() {
+
+    try {
+
+      const camStream =
+        await navigator.mediaDevices.getUserMedia({
+          video: true,
+        });
+
+      const videoTrack =
+        camStream.getVideoTracks()[0];
+
+      const localStream =
+        localStreamRef.current;
+
+      if (!localStream) {
+        return;
+      }
+
+      localStream.addTrack(
+        videoTrack
+      );
+
+      for (const [
+        remoteId,
+        peer,
+      ] of peersRef.current.entries()) {
+
+        peer.addTrack(
+          videoTrack,
+          localStream
+        );
+
+        try {
+
+          const offer =
+            await peer.createOffer();
+
+          await peer.setLocalDescription(
+            offer
+          );
+
+          getSocket().emit(
+            "offer",
+            {
+              to: remoteId,
+              offer,
+            }
+          );
+
+        } catch (error) {
+
+          console.error(
+            "Erro ao renegociar vídeo com",
+            remoteId,
+            error
+          );
+
+        }
+
+      }
+
+      setCameraOn(true);
+
+    } catch (error) {
+
+      console.error(
+        "Erro ao ligar câmera:",
         error
       );
 
       alert(
-        "Não foi possível acessar câmera ou microfone."
+        "Não foi possível acessar a câmera."
       );
+
     }
   }
 
@@ -289,6 +399,7 @@ export default function VideoMeeting({
         ?.getVideoTracks()[0];
 
     if (!track) {
+      enableCamera();
       return;
     }
 
@@ -392,7 +503,25 @@ export default function VideoMeeting({
 
     }
 
-  }, [stream]);
+    // cameraOn também entra nas deps: a prévia da câmera desmonta/remonta
+    // quando ela é ligada depois (fluxo de portas abertas), e o elemento
+    // de vídeo novo precisa receber o srcObject de novo.
+  }, [stream, cameraOn]);
+
+  // "Portas abertas": conecta áudio automaticamente (sem vídeo) quando o
+  // colega presente na sala também está de portas abertas — sem pedir
+  // clique em "Entrar na Chamada".
+  useEffect(() => {
+
+    if (autoJoin && !joined) {
+      // joinMeeting só chama setState depois do await em getUserMedia —
+      // não é uma atualização síncrona dentro do efeito.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      joinMeeting({ audioOnly: true });
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoJoin]);
 
   // Sai da chamada ao trocar de sala ou ao desmontar — sem isso a câmera
   // ficaria ligada e a conexão permaneceria aberta na sala anterior.
@@ -620,10 +749,19 @@ export default function VideoMeeting({
         Chamada de voz e vídeo
       </h3>
 
-      {!joined && (
+      {!joined && autoJoin && (
+
+        <p className="text-sm text-slate-500">
+          🚪 Conectando áudio automaticamente
+          (portas abertas)...
+        </p>
+
+      )}
+
+      {!joined && !autoJoin && (
 
         <button
-          onClick={joinMeeting}
+          onClick={() => joinMeeting()}
           className="
             rounded-lg
             bg-blue-600
@@ -659,23 +797,49 @@ export default function VideoMeeting({
                   text-slate-500
                 "
               >
+                {autoJoined &&
+                  "🚪 Chamada automática (só áudio) — "}
                 Sua câmera
                 {sharingScreen &&
                   " (compartilhando tela)"}
               </p>
 
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                muted
-                className="
-                  w-full
-                  max-w-md
-                  rounded-xl
-                  border
-                "
-              />
+              {cameraOn ? (
+
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  className="
+                    w-full
+                    max-w-md
+                    rounded-xl
+                    border
+                  "
+                />
+
+              ) : (
+
+                <div
+                  className="
+                    flex
+                    h-40
+                    w-full
+                    max-w-md
+                    items-center
+                    justify-center
+                    rounded-xl
+                    border
+                    bg-slate-100
+                    text-sm
+                    text-slate-500
+                  "
+                >
+                  Câmera desligada
+                </div>
+
+              )}
 
             </div>
 

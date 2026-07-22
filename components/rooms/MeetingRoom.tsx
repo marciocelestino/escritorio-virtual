@@ -11,6 +11,7 @@ type Props = {
   users: User[];
   currentUserId: number;
   onUserClick: (
+    userId: number,
     userName: string
   ) => void;
 };
@@ -92,7 +93,7 @@ export default function MeetingRoom({
   x={pos.x}
   y={pos.y}
   onClick={() =>
-  onUserClick(user.nome)
+  onUserClick(user.id, user.nome)
 }
 />
         );
