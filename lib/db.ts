@@ -19,33 +19,9 @@ function resolveDbPath() {
   return path.join(process.cwd(), "data", "app.db");
 }
 
-const DB_PATH = resolveDbPath();
-
-fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-
-const db = new Database(DB_PATH, {
-  timeout: 5000,
-});
-
-db.pragma("journal_mode = WAL");
-db.pragma("busy_timeout = 5000");
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    senha_hash TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'Disponivel',
-    room TEXT NOT NULL DEFAULT 'Recepção',
-    sala_nome TEXT,
-    avatar_tipo TEXT,
-    avatar_valor TEXT,
-    is_admin INTEGER NOT NULL DEFAULT 0
-  )
-`);
-
-function seedFromJsonIfEmpty() {
+function seedFromJsonIfEmpty(
+  db: Database.Database
+) {
 
   const { count } = db
     .prepare("SELECT COUNT(*) as count FROM users")
@@ -69,9 +45,9 @@ function seedFromJsonIfEmpty() {
     fs.readFileSync(seedPath, "utf8")
   );
 
-  // INSERT OR IGNORE: se dois processos (ex.: workers do build)
-  // caírem aqui ao mesmo tempo, o segundo não derruba com erro de
-  // chave duplicada — só ignora as linhas que o primeiro já inseriu.
+  // INSERT OR IGNORE: se dois processos caírem aqui ao mesmo tempo, o
+  // segundo não derruba com erro de chave duplicada — só ignora as
+  // linhas que o primeiro já inseriu.
   const insert = db.prepare(`
     INSERT OR IGNORE INTO users
       (id, nome, email, senha_hash, status, room, is_admin)
@@ -106,7 +82,53 @@ function seedFromJsonIfEmpty() {
   );
 }
 
-seedFromJsonIfEmpty();
+let dbInstance: Database.Database | null = null;
+
+// Conexão criada só na primeira vez que alguém realmente precisa do banco
+// (uma requisição de verdade chegando), nunca ao simplesmente importar este
+// módulo — o build do Next.js importa as rotas em vários processos paralelos
+// só para inspecioná-las, e abrir/escrever no mesmo arquivo SQLite nesse
+// momento (sem nenhuma requisição real) já derrubou o build com SIGSEGV.
+function getDb() {
+
+  if (dbInstance) {
+    return dbInstance;
+  }
+
+  const dbPath = resolveDbPath();
+
+  fs.mkdirSync(path.dirname(dbPath), {
+    recursive: true,
+  });
+
+  const db = new Database(dbPath, {
+    timeout: 5000,
+  });
+
+  db.pragma("journal_mode = WAL");
+  db.pragma("busy_timeout = 5000");
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      nome TEXT NOT NULL,
+      email TEXT NOT NULL UNIQUE,
+      senha_hash TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'Disponivel',
+      room TEXT NOT NULL DEFAULT 'Recepção',
+      sala_nome TEXT,
+      avatar_tipo TEXT,
+      avatar_valor TEXT,
+      is_admin INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
+  seedFromJsonIfEmpty(db);
+
+  dbInstance = db;
+
+  return db;
+}
 
 export type DbUser = {
   id: number;
@@ -150,7 +172,7 @@ function rowToUser(row: UserRow): DbUser {
 }
 
 export function getAllUsers(): DbUser[] {
-  const rows = db
+  const rows = getDb()
     .prepare("SELECT * FROM users ORDER BY id")
     .all() as UserRow[];
 
@@ -160,7 +182,7 @@ export function getAllUsers(): DbUser[] {
 export function getUserById(
   id: number
 ): DbUser | null {
-  const row = db
+  const row = getDb()
     .prepare("SELECT * FROM users WHERE id = ?")
     .get(id) as UserRow | undefined;
 
@@ -170,7 +192,7 @@ export function getUserById(
 export function getUserByEmail(
   email: string
 ): DbUser | null {
-  const row = db
+  const row = getDb()
     .prepare(
       "SELECT * FROM users WHERE lower(email) = lower(?)"
     )
@@ -183,7 +205,7 @@ export function emailInUseByAnotherUser(
   email: string,
   excludingId: number
 ): boolean {
-  const row = db
+  const row = getDb()
     .prepare(
       "SELECT id FROM users WHERE lower(email) = lower(?) AND id != ?"
     )
@@ -200,7 +222,7 @@ export function createUser(user: {
   isAdmin?: boolean;
 }): DbUser {
 
-  const result = db
+  const result = getDb()
     .prepare(
       `INSERT INTO users (nome, email, senha_hash, room, is_admin)
        VALUES (@nome, @email, @senhaHash, @room, @isAdmin)`
@@ -261,11 +283,11 @@ export function updateUser(
 
   const params = Object.fromEntries(updates);
 
-  db.prepare(
-    `UPDATE users SET ${setClause} WHERE id = @id`
-  ).run({ ...params, id });
+  getDb()
+    .prepare(
+      `UPDATE users SET ${setClause} WHERE id = @id`
+    )
+    .run({ ...params, id });
 
   return getUserById(id);
 }
-
-export default db;
