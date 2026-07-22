@@ -76,6 +76,105 @@ export default function Sidebar({
     ).length;
   }
 
+  if (collapsed) {
+
+    return (
+      <aside
+        className="
+          flex
+          w-16
+          flex-col
+          items-center
+          gap-1
+          border-r
+          bg-white
+          py-4
+        "
+      >
+        <button
+          onClick={() =>
+            setCollapsed(false)
+          }
+          title="Mostrar salas"
+          className="
+            mb-2
+            flex
+            h-8
+            w-8
+            items-center
+            justify-center
+            rounded-lg
+            text-slate-400
+            hover:bg-slate-100
+          "
+        >
+          ›
+        </button>
+
+        {rooms.map((room) => {
+
+          const active =
+            room.nome === currentRoom;
+
+          const count =
+            getRoomCount(
+              room.nome
+            );
+
+          return (
+            <button
+              key={room.id}
+              onClick={() =>
+                onRoomChange(
+                  room.nome
+                )
+              }
+              title={`${room.nome} (${count})`}
+              className={`
+                relative
+                flex
+                h-10
+                w-10
+                items-center
+                justify-center
+                rounded-xl
+                text-lg
+
+                ${
+                  active
+                    ? "bg-blue-100"
+                    : "hover:bg-slate-100"
+                }
+              `}
+            >
+              {getIcon(room.nome)}
+
+              {count > 0 && (
+                <span
+                  className="
+                    absolute
+                    -bottom-1
+                    -right-1
+                    rounded-full
+                    border
+                    border-white
+                    bg-slate-700
+                    px-1
+                    text-[9px]
+                    font-semibold
+                    text-white
+                  "
+                >
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </aside>
+    );
+  }
+
   return (
     <aside
       className="
@@ -84,10 +183,7 @@ export default function Sidebar({
         bg-white
       "
     >
-      <button
-        onClick={() =>
-          setCollapsed((prev) => !prev)
-        }
+      <div
         className="
           flex
           w-full
@@ -97,18 +193,22 @@ export default function Sidebar({
           p-4
           font-bold
           text-slate-900
-          hover:bg-slate-50
         "
       >
-        Salas
+        <button
+          onClick={() =>
+            setCollapsed(true)
+          }
+          className="flex items-center gap-2 hover:opacity-70"
+        >
+          Salas
+          <span className="text-slate-400 font-normal">
+            ‹
+          </span>
+        </button>
+      </div>
 
-        <span className="text-slate-400">
-          {collapsed ? "▸" : "▾"}
-        </span>
-      </button>
-
-      {!collapsed &&
-        rooms.map((room) => {
+      {rooms.map((room) => {
 
         const active =
           room.nome === currentRoom;

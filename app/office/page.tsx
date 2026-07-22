@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import UserCard from "@/components/UserCard";
 import RoomPresence from "@/components/RoomPresence";
+import RoomPulse from "@/components/RoomPulse";
 import StatusSelector from "@/components/StatusSelector";
 import { getSessionUser, getSessionToken } from "@/lib/session";
 import RoomView from "@/components/RoomView";
@@ -590,6 +591,12 @@ useEffect(() => {
           "
         >
 
+          <RoomPulse
+            currentRoom={currentRoom}
+            users={allUsers}
+            onSelect={moveToRoom}
+          />
+
           <div
             className="
               mb-6
@@ -871,40 +878,138 @@ useEffect(() => {
         </section>
 
         <aside
-          className="
-            w-80
+          className={`
             overflow-y-auto
             border-l
             bg-white
-          "
+
+            ${
+              usuariosColapsados
+                ? "w-16"
+                : "w-80"
+            }
+          `}
         >
 
-          <button
-            onClick={() =>
-              setUsuariosColapsados(
-                (prev) => !prev
-              )
-            }
-            className="
-              flex
-              w-full
-              items-center
-              justify-between
-              border-b
-              p-4
-              font-bold
-              text-slate-900
-              hover:bg-slate-50
-            "
-          >
-            Usuários
+          {usuariosColapsados ? (
 
-            <span className="text-slate-400">
-              {usuariosColapsados
-                ? "▸"
-                : "▾"}
-            </span>
-          </button>
+            <div
+              className="
+                flex
+                flex-col
+                items-center
+                gap-2
+                py-4
+              "
+            >
+
+              <button
+                onClick={() =>
+                  setUsuariosColapsados(false)
+                }
+                title="Mostrar usuários"
+                className="
+                  mb-2
+                  flex
+                  h-8
+                  w-8
+                  items-center
+                  justify-center
+                  rounded-lg
+                  text-slate-400
+                  hover:bg-slate-100
+                "
+              >
+                ‹
+              </button>
+
+              {onlineUsers.map((user) => {
+
+                const statusColor =
+                  user.status === "Disponivel"
+                    ? "bg-green-500"
+                    : user.status === "Ausente"
+                    ? "bg-yellow-400"
+                    : user.status === "Reuniao"
+                    ? "bg-red-500"
+                    : "bg-slate-300";
+
+                return (
+                  <button
+                    key={user.id}
+                    onClick={() =>
+                      setUsuariosColapsados(false)
+                    }
+                    title={`${user.nome} · ${user.status ?? "Disponível"}${
+                      user.room !== currentRoom
+                        ? ` · ${user.room}`
+                        : ""
+                    }`}
+                    className="
+                      relative
+                      flex
+                      h-9
+                      w-9
+                      items-center
+                      justify-center
+                      rounded-full
+                      bg-slate-100
+                      text-xs
+                      font-semibold
+                      text-slate-600
+                      hover:bg-slate-200
+                    "
+                  >
+                    {user.nome
+                      .charAt(0)
+                      .toUpperCase()}
+
+                    <span
+                      className={`
+                        absolute
+                        -bottom-0.5
+                        -right-0.5
+                        h-2.5
+                        w-2.5
+                        rounded-full
+                        border
+                        border-white
+                        ${statusColor}
+                      `}
+                    />
+                  </button>
+                );
+
+              })}
+
+            </div>
+
+          ) : (
+
+            <button
+              onClick={() =>
+                setUsuariosColapsados(true)
+              }
+              className="
+                flex
+                w-full
+                items-center
+                justify-between
+                border-b
+                p-4
+                font-bold
+                text-slate-900
+                hover:bg-slate-50
+              "
+            >
+              Usuários
+
+              <span className="text-slate-400">
+                ▾
+              </span>
+            </button>
+
+          )}
 
           {!usuariosColapsados &&
             onlineUsers.map((user) => (

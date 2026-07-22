@@ -220,6 +220,32 @@ app.prepare().then(() => {
       });
     });
 
+    // Avisa quem está na chamada se o microfone local está ligado ou
+    // desligado — mostra um selo de "mutado" no card de cada participante.
+    // Com `to`, avisa só um participante específico (usado quando alguém
+    // novo entra na chamada e precisa saber o estado atual de quem já
+    // estava lá, já que esse estado não é transmitido em broadcast).
+    socket.on("mic-state", ({ micOn, to }) => {
+      if (to) {
+        io.to(to).emit("mic-state-changed", {
+          socketId: socket.id,
+          micOn: Boolean(micOn),
+        });
+        return;
+      }
+
+      const callKey = socketCallRoom.get(socket.id);
+
+      if (!callKey) {
+        return;
+      }
+
+      socket.to(callKey).emit("mic-state-changed", {
+        socketId: socket.id,
+        micOn: Boolean(micOn),
+      });
+    });
+
     // Convida um usuário (esteja ele em qual sala estiver) pra vir até a
     // sala de quem está convidando.
     socket.on("invite-to-room", ({ to, room }) => {

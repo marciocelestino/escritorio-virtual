@@ -70,9 +70,14 @@ export default function MeetingRoom({
           justify-center
           rounded-xl
           border
-          bg-slate-100
+          border-amber-800/20
+          bg-gradient-to-b
+          from-amber-100
+          to-amber-200
           text-xl
           font-bold
+          text-amber-900
+          shadow-sm
         "
       >
         Mesa de Reunião

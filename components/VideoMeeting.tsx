@@ -37,12 +37,16 @@ function VideoTile({
   stream,
   muted = false,
   large = false,
+  speaking = false,
+  micMuted = false,
   onClick,
   onElement,
 }: {
   stream: MediaStream;
   muted?: boolean;
   large?: boolean;
+  speaking?: boolean;
+  micMuted?: boolean;
   onClick?: () => void;
   onElement?: (
     el: HTMLVideoElement | null
@@ -66,32 +70,63 @@ function VideoTile({
   }, []);
 
   return (
-    <video
-      ref={ref}
-      autoPlay
-      playsInline
-      muted={muted}
-      onClick={onClick}
-      className={
-        large
-          ? `
-            max-h-[65vh]
-            w-full
-            rounded-xl
-            border
-            bg-black
-            object-contain
-          `
-          : `
-            w-full
-            max-w-md
-            cursor-pointer
-            rounded-xl
-            border
-            object-cover
-          `
-      }
-    />
+    <div
+      className={`
+        relative
+        ${large ? "w-full" : "w-full max-w-md"}
+        rounded-xl
+        ${
+          speaking
+            ? "ring-2 ring-green-500"
+            : ""
+        }
+      `}
+    >
+      <video
+        ref={ref}
+        autoPlay
+        playsInline
+        muted={muted}
+        onClick={onClick}
+        className={
+          large
+            ? `
+              max-h-[65vh]
+              w-full
+              cursor-pointer
+              rounded-xl
+              border
+              bg-black
+              object-contain
+            `
+            : `
+              w-full
+              cursor-pointer
+              rounded-xl
+              border
+              object-cover
+            `
+        }
+      />
+
+      {micMuted && (
+        <span
+          className="
+            absolute
+            bottom-2
+            left-2
+            rounded-full
+            bg-black/60
+            px-2
+            py-1
+            text-xs
+            text-white
+          "
+        >
+          🔇
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -134,6 +169,29 @@ export default function VideoMeeting({
       null
     );
 
+  const micOnRef =
+    useRef(true);
+
+  // Detecção de quem está falando: um AnalyserNode por participante (local
+  // e remotos), nunca conectado ao destino de áudio — só lemos o volume,
+  // sem tocar o som de volta (senão o próprio microfone ecoaria).
+  const audioContextRef =
+    useRef<AudioContext | null>(null);
+
+  const analysersRef =
+    useRef<
+      Map<
+        string,
+        {
+          analyser: AnalyserNode;
+          data: Uint8Array<ArrayBuffer>;
+        }
+      >
+    >(new Map());
+
+  const speakingRef =
+    useRef<Set<string>>(new Set());
+
   const [joined, setJoined] =
     useState(false);
 
@@ -171,6 +229,16 @@ export default function VideoMeeting({
     Record<string, string>
   >({});
 
+  const [
+    remoteMicOff,
+    setRemoteMicOff,
+  ] = useState<
+    Record<string, boolean>
+  >({});
+
+  const [speakingIds, setSpeakingIds] =
+    useState<Set<string>>(new Set());
+
   function removePeer(
     remoteSocketId: string
   ) {
@@ -191,6 +259,8 @@ export default function VideoMeeting({
       remoteSocketId
     );
 
+    detachAnalyser(remoteSocketId);
+
     setRemoteStreams((prev) => {
       const next = { ...prev };
       delete next[remoteSocketId];
@@ -203,11 +273,74 @@ export default function VideoMeeting({
       return next;
     });
 
+    setRemoteMicOff((prev) => {
+      const next = { ...prev };
+      delete next[remoteSocketId];
+      return next;
+    });
+
     setExpandedId((current) =>
       current === remoteSocketId
         ? null
         : current
     );
+  }
+
+  function getAudioContext() {
+
+    if (!audioContextRef.current) {
+      audioContextRef.current =
+        new AudioContext();
+    }
+
+    return audioContextRef.current;
+  }
+
+  function attachAnalyser(
+    id: string,
+    mediaStream: MediaStream
+  ) {
+
+    if (
+      analysersRef.current.has(id)
+    ) {
+      return;
+    }
+
+    if (
+      mediaStream.getAudioTracks()
+        .length === 0
+    ) {
+      return;
+    }
+
+    const ctx = getAudioContext();
+
+    const source =
+      ctx.createMediaStreamSource(
+        mediaStream
+      );
+
+    const analyser =
+      ctx.createAnalyser();
+
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.6;
+
+    source.connect(analyser);
+
+    analysersRef.current.set(id, {
+      analyser,
+      data: new Uint8Array(
+        new ArrayBuffer(
+          analyser.frequencyBinCount
+        )
+      ),
+    });
+  }
+
+  function detachAnalyser(id: string) {
+    analysersRef.current.delete(id);
   }
 
   async function restartIce(
@@ -432,6 +565,15 @@ export default function VideoMeeting({
 
     localStreamRef.current = null;
     screenStreamRef.current = null;
+
+    analysersRef.current.clear();
+    speakingRef.current = new Set();
+    setSpeakingIds(new Set());
+
+    audioContextRef.current
+      ?.close()
+      .catch(() => {});
+    audioContextRef.current = null;
   }
 
   function leaveMeeting() {
@@ -448,6 +590,7 @@ export default function VideoMeeting({
     videoSendersRef.current.clear();
 
     setRemoteStreams({});
+    setRemoteMicOff({});
     setExpandedId(null);
 
     stopAllTracks();
@@ -625,6 +768,10 @@ export default function VideoMeeting({
     track.enabled = !track.enabled;
 
     setMicOn(track.enabled);
+
+    getSocket().emit("mic-state", {
+      micOn: track.enabled,
+    });
   }
 
   function muteRemoteParticipant(
@@ -768,6 +915,117 @@ export default function VideoMeeting({
   }, [joined]);
 
   useEffect(() => {
+    micOnRef.current = micOn;
+  }, [micOn]);
+
+  // Anexa/remove o analisador de volume da própria câmera quando ela
+  // liga/desliga (o áudio local continua ativo mesmo com a câmera
+  // desligada, então o analisador acompanha o `stream`, não a câmera).
+  useEffect(() => {
+
+    if (stream) {
+      attachAnalyser("local", stream);
+    } else {
+      detachAnalyser("local");
+    }
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream]);
+
+  // Anexa/remove o analisador de volume de cada participante remoto
+  // conforme eles entram/saem da chamada.
+  useEffect(() => {
+
+    Object.entries(remoteStreams).forEach(
+      ([id, remoteStream]) => {
+        attachAnalyser(id, remoteStream);
+      }
+    );
+
+    const currentIds = new Set(
+      Object.keys(remoteStreams)
+    );
+
+    analysersRef.current.forEach(
+      (_value, id) => {
+        if (
+          id !== "local" &&
+          !currentIds.has(id)
+        ) {
+          detachAnalyser(id);
+        }
+      }
+    );
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remoteStreams]);
+
+  // Sondagem periódica do volume de cada analisador — decide quem está
+  // "falando" agora (RMS do sinal de áudio acima de um limiar simples).
+  useEffect(() => {
+
+    if (!joined) {
+      speakingRef.current = new Set();
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSpeakingIds(new Set());
+      return;
+    }
+
+    const interval = setInterval(() => {
+
+      const next = new Set<string>();
+
+      analysersRef.current.forEach(
+        ({ analyser, data }, id) => {
+
+          analyser.getByteTimeDomainData(
+            data
+          );
+
+          let sumSquares = 0;
+
+          for (
+            let i = 0;
+            i < data.length;
+            i++
+          ) {
+            const value =
+              (data[i] - 128) / 128;
+            sumSquares +=
+              value * value;
+          }
+
+          const rms = Math.sqrt(
+            sumSquares / data.length
+          );
+
+          if (rms > 0.02) {
+            next.add(id);
+          }
+
+        }
+      );
+
+      const prev = speakingRef.current;
+
+      const changed =
+        next.size !== prev.size ||
+        Array.from(next).some(
+          (id) => !prev.has(id)
+        );
+
+      if (changed) {
+        speakingRef.current = next;
+        setSpeakingIds(next);
+      }
+
+    }, 200);
+
+    return () => clearInterval(interval);
+
+  }, [joined]);
+
+  useEffect(() => {
     roomRef.current = room;
   }, [room]);
 
@@ -822,11 +1080,33 @@ export default function VideoMeeting({
         if (track) {
           track.enabled = false;
           setMicOn(false);
+
+          socket.emit("mic-state", {
+            micOn: false,
+          });
         }
 
         onNotify?.(
           `🔇 ${fromNome} mutou seu microfone.`
         );
+
+      }
+    );
+
+    socket.on(
+      "mic-state-changed",
+      ({
+        socketId,
+        micOn: remoteMicOn,
+      }: {
+        socketId: string;
+        micOn: boolean;
+      }) => {
+
+        setRemoteMicOff((prev) => ({
+          ...prev,
+          [socketId]: !remoteMicOn,
+        }));
 
       }
     );
@@ -913,6 +1193,15 @@ export default function VideoMeeting({
             [socketId]: nome,
           }));
         }
+
+        // Quem já está na chamada avisa o recém-chegado do próprio estado
+        // do microfone — esse estado não é transmitido por padrão, só nas
+        // mudanças, então sem isso o selo de "mutado" ficaria incorreto
+        // até a próxima vez que a pessoa mutar/desmutar.
+        socket.emit("mic-state", {
+          to: socketId,
+          micOn: micOnRef.current,
+        });
 
       }
     );
@@ -1053,6 +1342,7 @@ export default function VideoMeeting({
       socket.off("answer");
       socket.off("ice-candidate");
       socket.off("muted-by-someone");
+      socket.off("mic-state-changed");
       socket.off(
         "connect",
         handleReconnect
@@ -1137,6 +1427,18 @@ export default function VideoMeeting({
                 stream={expandedStream}
                 muted={expandedId === "local"}
                 large
+                speaking={
+                  expandedId
+                    ? speakingIds.has(
+                        expandedId
+                      )
+                    : false
+                }
+                micMuted={
+                  expandedId !== "local" &&
+                  expandedId !== null &&
+                  remoteMicOff[expandedId] === true
+                }
                 onClick={() =>
                   setExpandedId(null)
                 }
@@ -1204,6 +1506,9 @@ export default function VideoMeeting({
                 <VideoTile
                   stream={stream}
                   muted
+                  speaking={speakingIds.has(
+                    "local"
+                  )}
                   onClick={() =>
                     toggleExpanded("local")
                   }
@@ -1267,6 +1572,14 @@ export default function VideoMeeting({
 
                   <VideoTile
                     stream={remoteStream}
+                    speaking={speakingIds.has(
+                      socketId
+                    )}
+                    micMuted={
+                      remoteMicOff[
+                        socketId
+                      ] === true
+                    }
                     onClick={() =>
                       toggleExpanded(
                         socketId

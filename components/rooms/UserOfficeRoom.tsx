@@ -1,4 +1,8 @@
 import PositionedAvatar from "../PositionedAvatar";
+import {
+  DesksDecor,
+  ChairDecor,
+} from "./RoomDecor";
 
 type User = {
   id: number;
@@ -61,24 +65,22 @@ export default function UserOfficeRoom({
         className="
           absolute
           left-1/2
-          top-[110px]
+          top-[100px]
           -translate-x-1/2
-          text-6xl
         "
       >
-        🖥️ 🖥️
+        <DesksDecor />
       </div>
 
       <div
         className="
           absolute
           left-1/2
-          top-[220px]
+          top-[210px]
           -translate-x-1/2
-          text-6xl
         "
       >
-        💺
+        <ChairDecor />
       </div>
 
       {users.map((user, index) => {

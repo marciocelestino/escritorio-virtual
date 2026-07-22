@@ -1,4 +1,9 @@
 import PositionedAvatar from "../PositionedAvatar";
+import {
+  TreeDecor,
+  GrassDecor,
+  PondDecor,
+} from "./RoomDecor";
 
 type User = {
   id: number;
@@ -56,33 +61,30 @@ export default function NatureRoom({
         className="
           absolute
           left-[100px]
-          top-[80px]
-          text-5xl
+          top-[70px]
         "
       >
-        🌳
+        <TreeDecor />
       </div>
 
       <div
         className="
           absolute
           left-[320px]
-          top-[50px]
-          text-5xl
+          top-[40px]
         "
       >
-        🌳
+        <TreeDecor />
       </div>
 
       <div
         className="
           right-[100px]
           absolute
-          top-[80px]
-          text-5xl
+          top-[70px]
         "
       >
-        🌳
+        <TreeDecor />
       </div>
 
       <div
@@ -92,16 +94,9 @@ export default function NatureRoom({
           top-1/2
           -translate-x-1/2
           -translate-y-1/2
-          rounded-full
-          border-4
-          border-blue-300
-          bg-blue-200
-          px-14
-          py-8
-          text-xl
         "
       >
-        🦆 Lago
+        <PondDecor />
       </div>
 
       <div
@@ -109,10 +104,9 @@ export default function NatureRoom({
           absolute
           left-[180px]
           bottom-[70px]
-          text-5xl
         "
       >
-        🌿
+        <GrassDecor />
       </div>
 
       <div
@@ -120,10 +114,9 @@ export default function NatureRoom({
           absolute
           left-[350px]
           bottom-[70px]
-          text-5xl
         "
       >
-        🌿
+        <GrassDecor />
       </div>
 
       {users.map((user, index) => {

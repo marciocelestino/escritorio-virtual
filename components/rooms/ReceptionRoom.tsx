@@ -1,4 +1,8 @@
 import PositionedAvatar from "../PositionedAvatar";
+import {
+  DoorDecor,
+  SofaDecor,
+} from "./RoomDecor";
 
 type User = {
   id: number;
@@ -56,34 +60,31 @@ export default function ReceptionRoom({
         className="
           absolute
           left-1/2
-          top-[90px]
+          top-[70px]
           -translate-x-1/2
-          text-6xl
         "
       >
-        🚪
+        <DoorDecor />
       </div>
 
       <div
         className="
           absolute
-          left-[150px]
-          top-[180px]
-          text-5xl
+          left-[130px]
+          top-[175px]
         "
       >
-        🛋️
+        <SofaDecor />
       </div>
 
       <div
         className="
           absolute
-          right-[150px]
-          top-[180px]
-          text-5xl
+          right-[130px]
+          top-[175px]
         "
       >
-        🛋️
+        <SofaDecor />
       </div>
 
       <div
