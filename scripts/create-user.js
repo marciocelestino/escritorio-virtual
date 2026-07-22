@@ -1,16 +1,20 @@
 const path = require("path");
 const fs = require("fs");
 const bcrypt = require("bcryptjs");
-const Database = require("better-sqlite3");
 
-// Ferramenta de desenvolvimento local: grava direto no banco SQLite usado
-// pelo servidor rodando na sua máquina (data/app.db). Em produção (Railway),
-// o banco vive num volume separado do código — use a página /admin do site
-// para criar usuários lá.
+// Ferramenta de desenvolvimento local: grava direto no arquivo de usuários
+// usado pelo servidor rodando na sua máquina (data/usuarios-db.json). Em
+// produção (Railway), os usuários vivem num arquivo separado, dentro do
+// volume persistente — use a página /admin do site para criar usuários lá.
 
-const DB_PATH =
+const USERS_PATH =
   process.env.DATABASE_PATH ||
-  path.join(__dirname, "..", "data", "app.db");
+  path.join(
+    __dirname,
+    "..",
+    "data",
+    "usuarios-db.json"
+  );
 
 function fail(message) {
   console.error(`Erro: ${message}`);
@@ -27,59 +31,61 @@ if (!nome || !email || !senha) {
     "Exemplo: node scripts/create-user.js \"Ana Paula\" ana@internit.com.br minhasenha123"
   );
   console.log(
-    "\nAtenção: isso grava no banco LOCAL (data/app.db). Para criar usuários em produção, use a página /admin do site."
+    "\nAtenção: isso grava no arquivo LOCAL (data/usuarios-db.json). Para criar usuários em produção, use a página /admin do site."
   );
   process.exit(1);
 }
 
-if (!fs.existsSync(DB_PATH)) {
+if (!fs.existsSync(USERS_PATH)) {
   fail(
-    `banco de dados não encontrado em ${DB_PATH}. Rode "npm run dev" pelo menos uma vez antes, para ele ser criado/inicializado.`
+    `arquivo de usuários não encontrado em ${USERS_PATH}. Rode "npm run dev" pelo menos uma vez antes (e faça algum login/consulta), para ele ser criado/inicializado.`
   );
 }
 
-const db = new Database(DB_PATH);
+const users = JSON.parse(
+  fs.readFileSync(USERS_PATH, "utf8")
+);
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    nome TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    senha_hash TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'Disponivel',
-    room TEXT NOT NULL DEFAULT 'Recepção',
-    sala_nome TEXT,
-    avatar_tipo TEXT,
-    avatar_valor TEXT,
-    is_admin INTEGER NOT NULL DEFAULT 0
-  )
-`);
-
-const existing = db
-  .prepare(
-    "SELECT id FROM users WHERE lower(email) = lower(?)"
-  )
-  .get(email);
+const existing = users.find(
+  (u) =>
+    u.email.toLowerCase() ===
+    email.toLowerCase()
+);
 
 if (existing) {
   fail(`já existe um usuário com o e-mail ${email}`);
 }
 
-const senhaHash = bcrypt.hashSync(senha, 10);
+const nextId =
+  users.reduce(
+    (max, u) => Math.max(max, u.id),
+    0
+  ) + 1;
 
-const result = db
-  .prepare(
-    `INSERT INTO users (nome, email, senha_hash)
-     VALUES (?, ?, ?)`
-  )
-  .run(nome, email, senhaHash);
+users.push({
+  id: nextId,
+  nome,
+  email,
+  senhaHash: bcrypt.hashSync(senha, 10),
+  status: "Disponivel",
+  room: "Recepção",
+  salaNome: null,
+  avatarTipo: null,
+  avatarValor: null,
+  isAdmin: false,
+});
+
+fs.writeFileSync(
+  USERS_PATH,
+  JSON.stringify(users, null, 2)
+);
 
 console.log(
-  `Usuário "${nome}" criado com id ${result.lastInsertRowid} no banco local.`
+  `Usuário "${nome}" criado com id ${nextId} no arquivo local.`
 );
 console.log(
   `A sala pessoal "Espaço ${nome}" já aparece automaticamente no menu lateral.`
 );
 console.log(
-  "Isso só afeta o banco local. Em produção, crie o usuário pela página /admin do site."
+  "Isso só afeta o arquivo local. Em produção, crie o usuário pela página /admin do site."
 );

@@ -37,7 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
-# banco de dados local (dev) — em produção vive num volume do Railway
+# arquivo de usuários local (dev) — em produção vive num volume do Railway
+/data/usuarios-db.json
+/data/usuarios-db.json.tmp
 /data/app.db
 /data/app.db-journal
 /data/app.db-wal
