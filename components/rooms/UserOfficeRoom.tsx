@@ -1,9 +1,5 @@
 import PositionedAvatar from "../PositionedAvatar";
-import {
-  DesksDecor,
-  ChairDecor,
-  EmptySeatMarker,
-} from "./RoomDecor";
+import { EmptySeatMarker } from "./RoomDecor";
 
 type User = {
   id: number;
@@ -34,24 +30,22 @@ export default function UserOfficeRoom({
   onSeatClick,
 }: Props) {
 
+  const columns = [20, 120, 220];
+
   const positions = [
-    { x: 140, y: 120 },
-    { x: 320, y: 120 },
-    { x: 500, y: 120 },
-    { x: 140, y: 260 },
-    { x: 320, y: 260 },
-    { x: 500, y: 260 },
+    ...columns.map((x) => ({ x, y: 46 })),
+    ...columns.map((x) => ({ x, y: 118 })),
   ];
 
   return (
     <div
       className="
         relative
-        h-[420px]
+        h-[210px]
         rounded-2xl
         border
         bg-white
-        p-6
+        p-4
         dark:border-slate-700
         dark:bg-slate-800
       "
@@ -59,37 +53,15 @@ export default function UserOfficeRoom({
 
       <h3
         className="
-          mb-6
-          text-2xl
-          font-bold
+          mb-2
+          text-sm
+          font-semibold
           text-slate-900
           dark:text-slate-100
         "
       >
         💻 {room}
       </h3>
-
-      <div
-        className="
-          absolute
-          left-1/2
-          top-[100px]
-          -translate-x-1/2
-        "
-      >
-        <DesksDecor />
-      </div>
-
-      <div
-        className="
-          absolute
-          left-1/2
-          top-[210px]
-          -translate-x-1/2
-        "
-      >
-        <ChairDecor />
-      </div>
 
       {positions.map((pos, seatIndex) => {
 

@@ -11,7 +11,7 @@ export default function Notification({
         fixed
         top-5
         right-5
-        z-50
+        z-[60]
         rounded-xl
         bg-blue-600
         px-5

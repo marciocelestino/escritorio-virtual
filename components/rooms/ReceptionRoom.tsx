@@ -1,9 +1,5 @@
 import PositionedAvatar from "../PositionedAvatar";
-import {
-  DoorDecor,
-  SofaDecor,
-  EmptySeatMarker,
-} from "./RoomDecor";
+import { EmptySeatMarker } from "./RoomDecor";
 
 type User = {
   id: number;
@@ -33,88 +29,36 @@ export default function ReceptionRoom({
 }: Props) {
 
   const positions = [
-    { x: 140, y: 240 },
-    { x: 520, y: 240 },
-    { x: 330, y: 320 },
-    { x: 230, y: 120 },
+    { x: 20, y: 46 },
+    { x: 120, y: 46 },
+    { x: 220, y: 46 },
+    { x: 320, y: 46 },
   ];
 
   return (
     <div
       className="
         relative
-        h-[420px]
+        h-[140px]
         rounded-2xl
         border
         bg-white
-        p-6
+        p-4
         dark:border-slate-700
         dark:bg-slate-800
       "
     >
       <h3
         className="
-          mb-6
-          text-2xl
-          font-bold
+          mb-2
+          text-sm
+          font-semibold
           text-slate-900
           dark:text-slate-100
         "
       >
         🏢 Recepção
       </h3>
-
-      <div
-        className="
-          absolute
-          left-1/2
-          top-[70px]
-          -translate-x-1/2
-        "
-      >
-        <DoorDecor />
-      </div>
-
-      <div
-        className="
-          absolute
-          left-[130px]
-          top-[175px]
-        "
-      >
-        <SofaDecor />
-      </div>
-
-      <div
-        className="
-          absolute
-          right-[130px]
-          top-[175px]
-        "
-      >
-        <SofaDecor />
-      </div>
-
-      <div
-        className="
-          absolute
-          left-1/2
-          bottom-[70px]
-          -translate-x-1/2
-          rounded-lg
-          border
-          bg-slate-100
-          px-8
-          py-3
-          font-semibold
-          text-slate-900
-          dark:border-slate-600
-          dark:bg-slate-700
-          dark:text-slate-100
-        "
-      >
-        Balcão de Recepção
-      </div>
 
       {positions.map((pos, seatIndex) => {
 

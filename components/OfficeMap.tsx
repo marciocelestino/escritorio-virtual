@@ -128,31 +128,31 @@ export default function OfficeMap({
       <div
         className="
           grid
-          gap-6
+          gap-4
 
-          lg:grid-cols-[1fr_1.6fr_1fr]
+          lg:grid-cols-[1fr_1.3fr_1fr]
         "
       >
 
-        <div className="min-w-[320px]">
+        <div className="min-w-[280px]">
           {renderRoom(commonRooms[0].nome)}
         </div>
 
-        <div className="min-w-[600px]">
+        <div className="min-w-[420px]">
           {renderRoom(commonRooms[1].nome)}
         </div>
 
-        <div className="min-w-[320px]">
+        <div className="min-w-[280px]">
           {renderRoom(commonRooms[2].nome)}
         </div>
 
       </div>
 
       <div
-        className="mt-6 grid gap-6"
+        className="mt-4 grid gap-4"
         style={{
           gridTemplateColumns:
-            "repeat(auto-fit, minmax(300px, 1fr))",
+            "repeat(auto-fit, minmax(260px, 1fr))",
         }}
       >
 

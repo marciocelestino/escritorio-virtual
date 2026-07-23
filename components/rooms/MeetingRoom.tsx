@@ -28,27 +28,25 @@ export default function MeetingRoom({
   onSeatClick,
 }: Props) {
 
-  // 3 fileiras de 5 lugares (15 ao todo), voltadas pra mesa/tela no topo —
-  // formato "sala de treinamento", em vez do antigo frente-a-frente (que
-  // só cabia 6), pra caber um grupo bem maior.
-  const columns = [80, 220, 360, 500, 640];
+  // 3 fileiras de 5 lugares (15 ao todo), formato "sala de treinamento".
+  const columns = [20, 120, 220, 320, 420];
 
   const positions = [
-    ...columns.map((x) => ({ x, y: 130 })),
-    ...columns.map((x) => ({ x, y: 250 })),
-    ...columns.map((x) => ({ x, y: 370 })),
+    ...columns.map((x) => ({ x, y: 46 })),
+    ...columns.map((x) => ({ x, y: 118 })),
+    ...columns.map((x) => ({ x, y: 190 })),
   ];
 
   return (
     <div
       className="
         relative
-        h-[480px]
+        h-[280px]
         overflow-x-auto
         rounded-2xl
         border
         bg-white
-        p-6
+        p-4
         dark:border-slate-700
         dark:bg-slate-800
       "
@@ -56,41 +54,15 @@ export default function MeetingRoom({
 
       <h3
         className="
-          mb-6
-          text-2xl
-          font-bold
+          mb-2
+          text-sm
+          font-semibold
           text-slate-900
           dark:text-slate-100
         "
       >
         👥 Sala de Reunião
       </h3>
-
-      <div
-        className="
-          absolute
-          left-1/2
-          top-[65px]
-          flex
-          h-14
-          w-[620px]
-          -translate-x-1/2
-          items-center
-          justify-center
-          rounded-xl
-          border
-          border-amber-800/20
-          bg-gradient-to-b
-          from-amber-100
-          to-amber-200
-          text-lg
-          font-bold
-          text-amber-900
-          shadow-sm
-        "
-      >
-        Mesa de Reunião
-      </div>
 
       {positions.map((pos, seatIndex) => {
 

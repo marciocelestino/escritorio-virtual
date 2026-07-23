@@ -48,24 +48,24 @@ const ICE_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
 ];
 
+// Sempre mudo — o áudio de cada participante toca por um <RemoteAudio>
+// dedicado (ver mais abaixo), não pelo elemento de vídeo. Isso faz o
+// áudio continuar tocando mesmo quando mostramos o avatar no lugar do
+// vídeo (câmera desligada).
 function VideoTile({
   stream,
-  muted = false,
   large = false,
   small = false,
   speaking = false,
   micMuted = false,
-  sinkId,
   onClick,
   onElement,
 }: {
   stream: MediaStream;
-  muted?: boolean;
   large?: boolean;
   small?: boolean;
   speaking?: boolean;
   micMuted?: boolean;
-  sinkId?: string;
   onClick?: () => void;
   onElement?: (
     el: HTMLVideoElement | null
@@ -87,29 +87,6 @@ function VideoTile({
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // setSinkId (escolher o alto-falante de saída) é uma API não-padrão,
-  // hoje só disponível em navegadores baseados em Chromium — ignora
-  // silenciosamente se o navegador não suportar.
-  useEffect(() => {
-
-    const el = ref.current as
-      | (HTMLVideoElement & {
-          setSinkId?: (
-            id: string
-          ) => Promise<void>;
-        })
-      | null;
-
-    if (
-      el &&
-      sinkId &&
-      typeof el.setSinkId === "function"
-    ) {
-      el.setSinkId(sinkId).catch(() => {});
-    }
-
-  }, [sinkId]);
 
   return (
     <div
@@ -134,7 +111,7 @@ function VideoTile({
         ref={ref}
         autoPlay
         playsInline
-        muted={muted}
+        muted
         onClick={onClick}
         className={
           large
@@ -184,12 +161,14 @@ function CameraOffAvatar({
   avatarTipo,
   avatarValor,
   micMuted = false,
+  speaking = false,
   small = false,
 }: {
   nome?: string;
   avatarTipo?: string | null;
   avatarValor?: string | null;
   micMuted?: boolean;
+  speaking?: boolean;
   small?: boolean;
 }) {
 
@@ -213,6 +192,11 @@ function CameraOffAvatar({
         bg-slate-100
         dark:border-slate-600
         dark:bg-slate-700
+        ${
+          speaking
+            ? "ring-2 ring-green-500"
+            : ""
+        }
         ${
           small
             ? "h-20 w-20 shrink-0"
@@ -280,6 +264,59 @@ function CameraOffAvatar({
       )}
 
     </div>
+  );
+}
+
+// Áudio de um participante remoto, sempre montado enquanto ele estiver na
+// chamada — independente de estarmos mostrando o vídeo dele ou o avatar
+// (câmera desligada). Antes, o som só tocava através do elemento de
+// vídeo; quando a câmera estava desligada não renderizávamos nenhum
+// vídeo, e o áudio da pessoa parava de tocar pra todo mundo (mesmo ela
+// falando normalmente). Separar o áudio do vídeo resolve isso — o vídeo
+// (quando mostrado) sempre fica mudo, esse elemento é quem realmente
+// toca o som.
+function RemoteAudio({
+  stream,
+  sinkId,
+}: {
+  stream: MediaStream;
+  sinkId?: string;
+}) {
+
+  const ref = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    if (ref.current) {
+      ref.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  useEffect(() => {
+
+    const el = ref.current as
+      | (HTMLAudioElement & {
+          setSinkId?: (
+            id: string
+          ) => Promise<void>;
+        })
+      | null;
+
+    if (
+      el &&
+      sinkId &&
+      typeof el.setSinkId === "function"
+    ) {
+      el.setSinkId(sinkId).catch(() => {});
+    }
+
+  }, [sinkId]);
+
+  return (
+    <audio
+      ref={ref}
+      autoPlay
+      style={{ display: "none" }}
+    />
   );
 }
 
@@ -1892,13 +1929,30 @@ export default function VideoMeeting({
 
     <>
 
+    {remoteEntries.map(
+      ([socketId, remoteStream]) => (
+
+        <RemoteAudio
+          key={socketId}
+          stream={remoteStream}
+          sinkId={
+            selectedSpeakerId || undefined
+          }
+        />
+
+      )
+    )}
+
+    {/* right-[336px] reserva os 320px da barra lateral de Participantes/
+        Chat (sempre visível em app/office/page.tsx) + 16px de respiro —
+        sem isso, esses elementos fixos ficariam escondidos atrás dela. */}
     {!joined && (
 
       <div
         className="
           fixed
           bottom-4
-          right-4
+          right-[336px]
           z-40
           w-72
           rounded-2xl
@@ -1960,8 +2014,9 @@ export default function VideoMeeting({
       <div
         className="
           fixed
-          inset-x-0
           bottom-0
+          left-0
+          right-80
           z-40
           border-t
           bg-white/95
@@ -2036,7 +2091,6 @@ export default function VideoMeeting({
 
                 <VideoTile
                   stream={stream}
-                  muted
                   small
                   speaking={speakingIds.has(
                     "local"
@@ -2053,6 +2107,9 @@ export default function VideoMeeting({
                   nome={myNome}
                   avatarTipo={myAvatarTipo}
                   avatarValor={myAvatarValor}
+                  speaking={speakingIds.has(
+                    "local"
+                  )}
                   micMuted={!micOn}
                   small
                 />
@@ -2118,6 +2175,9 @@ export default function VideoMeeting({
                       avatarValor={
                         remoteUser?.avatarValor
                       }
+                      speaking={speakingIds.has(
+                        socketId
+                      )}
                       micMuted={
                         remoteMicOff[
                           socketId
@@ -2138,10 +2198,6 @@ export default function VideoMeeting({
                         remoteMicOff[
                           socketId
                         ] === true
-                      }
-                      sinkId={
-                        selectedSpeakerId ||
-                        undefined
                       }
                       onClick={() =>
                         toggleExpanded(
@@ -2495,7 +2551,7 @@ export default function VideoMeeting({
         className="
           fixed
           inset-0
-          z-50
+          z-[70]
           flex
           items-center
           justify-center
@@ -2532,6 +2588,13 @@ export default function VideoMeeting({
                   ? myAvatarValor
                   : expandedRosterUser?.avatarValor
               }
+              speaking={
+                expandedId
+                  ? speakingIds.has(
+                      expandedId
+                    )
+                  : false
+              }
               micMuted={
                 expandedId === "local"
                   ? !micOn
@@ -2545,7 +2608,6 @@ export default function VideoMeeting({
 
             <VideoTile
               stream={expandedStream}
-              muted={expandedId === "local"}
               large
               speaking={
                 expandedId
@@ -2559,9 +2621,6 @@ export default function VideoMeeting({
                   ? !micOn
                   : expandedId !== null &&
                     remoteMicOff[expandedId] === true
-              }
-              sinkId={
-                selectedSpeakerId || undefined
               }
               onClick={() =>
                 setExpandedId(null)

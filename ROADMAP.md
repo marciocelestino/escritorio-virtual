@@ -80,6 +80,21 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   (mesmo se não for a sala "atual"). Sala de Reunião aparece maior/mais
   central, como no mockup. Substituiu o "pulso do escritório" (tira de
   pastilhas), que ficou redundante com a ocupação já visível no mapa.
+- **Corrige áudio cortado com a câmera desligada**: mostrar o avatar no
+  lugar do vídeo (item acima) tinha um efeito colateral sério — como só
+  o elemento de vídeo tocava áudio, quem estava com a câmera desligada
+  (ou nunca ligou, ex.: sem webcam) ficava mudo pros outros. Cada
+  participante agora tem um elemento de áudio próprio, independente de
+  mostrar vídeo ou avatar — o indicador de "falando" também passou a
+  aparecer no avatar, não só no vídeo.
+- **Cards das salas no mapa ficam menores**: removida toda a decoração
+  (porta, sofás, plantas, mesas, cadeiras) — só os assentos, avatares e
+  o nome da sala. Bem menos altura por card, bem menos rolagem.
+- **Painel Participantes/Chat vira barra lateral de verdade**: saiu do
+  meio do conteúdo rolável (onde a barra fixa da chamada cobria a
+  rolagem do chat) e virou parte da coluna lateral direita, acima da
+  lista de Usuários — sempre visível, com prioridade sobre a barra da
+  chamada.
 
 ## Ainda por fazer
 
@@ -87,10 +102,6 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
 
 - **Central de notificações e busca global (Ctrl+K)**: recursos novos,
   não existem hoje.
-- **Piso com visual mais próximo do mockup** (texturas de madeira/pedra
-  em estilo isométrico): o mapa hoje reaproveita a decoração em CSS já
-  existente (formas simples), não o visual fotorrealista/3D do mockup
-  — isso exigiria assets de ilustração de verdade, não só código.
 
 ### Controles de chamada
 

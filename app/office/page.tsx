@@ -684,7 +684,7 @@ useEffect(() => {
             fixed
             top-5
             right-5
-            z-50
+            z-[60]
             rounded-xl
             bg-indigo-600
             px-5
@@ -951,6 +951,27 @@ useEffect(() => {
 
             </div>
 
+          </div>
+
+        </section>
+
+        <aside
+          className="
+            relative
+            z-50
+            flex
+            w-80
+            shrink-0
+            flex-col
+            border-l
+            bg-white
+            dark:border-slate-700
+            dark:bg-slate-900
+          "
+        >
+
+          <div className="shrink-0 overflow-y-auto p-4">
+
             <RoomPanel
               room={currentRoom}
               users={onlineUsers}
@@ -963,132 +984,18 @@ useEffect(() => {
 
           </div>
 
-        </section>
-
-        <aside
-          className={`
-            overflow-y-auto
-            border-l
-            bg-white
-            dark:border-slate-700
-            dark:bg-slate-900
-
-            ${
-              usuariosColapsados
-                ? "w-16"
-                : "w-80"
-            }
-          `}
-        >
-
-          {usuariosColapsados ? (
-
-            <div
-              className="
-                flex
-                flex-col
-                items-center
-                gap-2
-                py-4
-              "
-            >
-
-              <button
-                onClick={() =>
-                  setUsuariosColapsados(false)
-                }
-                title="Mostrar usuários"
-                className="
-                  mb-2
-                  flex
-                  h-8
-                  w-8
-                  items-center
-                  justify-center
-                  rounded-lg
-                  text-slate-400
-                  hover:bg-slate-100
-                  dark:text-slate-500
-                  dark:hover:bg-slate-800
-                "
-              >
-                ‹
-              </button>
-
-              {onlineUsers.map((user) => {
-
-                const statusColor =
-                  user.status === "Disponivel"
-                    ? "bg-green-500"
-                    : user.status === "Ausente"
-                    ? "bg-yellow-400"
-                    : user.status === "Reuniao"
-                    ? "bg-red-500"
-                    : "bg-slate-300";
-
-                return (
-                  <button
-                    key={user.id}
-                    onClick={() =>
-                      setUsuariosColapsados(false)
-                    }
-                    title={`${user.nome} · ${user.status ?? "Disponível"}${
-                      user.room !== currentRoom
-                        ? ` · ${user.room}`
-                        : ""
-                    }`}
-                    className="
-                      relative
-                      flex
-                      h-9
-                      w-9
-                      items-center
-                      justify-center
-                      rounded-full
-                      bg-slate-100
-                      text-xs
-                      font-semibold
-                      text-slate-600
-                      hover:bg-slate-200
-                      dark:bg-slate-800
-                      dark:text-slate-300
-                      dark:hover:bg-slate-700
-                    "
-                  >
-                    {user.nome
-                      .charAt(0)
-                      .toUpperCase()}
-
-                    <span
-                      className={`
-                        absolute
-                        -bottom-0.5
-                        -right-0.5
-                        h-2.5
-                        w-2.5
-                        rounded-full
-                        border
-                        border-white
-                        dark:border-slate-900
-                        ${statusColor}
-                      `}
-                    />
-                  </button>
-                );
-
-              })}
-
-            </div>
-
-          ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t dark:border-slate-700">
 
             <button
               onClick={() =>
-                setUsuariosColapsados(true)
+                setUsuariosColapsados(
+                  (current) => !current
+                )
               }
               className="
                 flex
                 w-full
+                shrink-0
                 items-center
                 justify-between
                 border-b
@@ -1101,50 +1008,50 @@ useEffect(() => {
                 dark:hover:bg-slate-800
               "
             >
-              Usuários
+              Usuários ({onlineUsers.length})
 
               <span className="text-slate-400 dark:text-slate-500">
-                ▾
+                {usuariosColapsados ? "▸" : "▾"}
               </span>
             </button>
 
-          )}
+            {!usuariosColapsados &&
+              onlineUsers.map((user) => (
 
-          {!usuariosColapsados &&
-            onlineUsers.map((user) => (
+              <UserCard
+                key={user.id}
+                nome={user.nome}
+                status={user.status}
+                room={
+                  user.room !== currentRoom
+                    ? user.room
+                    : undefined
+                }
+                onInvite={
+                  user.id !== currentUserId &&
+                  user.room !== currentRoom
+                    ? () => {
 
-            <UserCard
-              key={user.id}
-              nome={user.nome}
-              status={user.status}
-              room={
-                user.room !== currentRoom
-                  ? user.room
-                  : undefined
-              }
-              onInvite={
-                user.id !== currentUserId &&
-                user.room !== currentRoom
-                  ? () => {
+                        getSocket().emit(
+                          "invite-to-room",
+                          {
+                            to: user.id,
+                            room: currentRoom,
+                          }
+                        );
 
-                      getSocket().emit(
-                        "invite-to-room",
-                        {
-                          to: user.id,
-                          room: currentRoom,
-                        }
-                      );
+                        showNotification(
+                          `Convite enviado para ${user.nome}.`
+                        );
 
-                      showNotification(
-                        `Convite enviado para ${user.nome}.`
-                      );
+                      }
+                    : undefined
+                }
+              />
 
-                    }
-                  : undefined
-              }
-            />
+            ))}
 
-          ))}
+          </div>
 
         </aside>
 
