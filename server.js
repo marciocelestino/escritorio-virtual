@@ -806,16 +806,37 @@ app.prepare().then(() => {
       });
     });
 
-    // Remove um participante da chamada — só funciona se quem pediu e o
-    // alvo estiverem na mesma sala de chamada (não dá pra expulsar alguém
-    // de uma chamada que você nem está). O alvo recebe um aviso e, do lado
-    // dele, encerra a própria captura de câmera/microfone (o servidor só
-    // consegue tirar o socket da sala de sinalização).
+    // Remove um participante da chamada — só admin pode fazer isso, e só
+    // funciona se quem pediu e o alvo estiverem na mesma sala de chamada
+    // (não dá pra expulsar alguém de uma chamada que você nem está). Um
+    // admin nunca pode ser removido, nem por outro admin. O alvo recebe
+    // um aviso e, do lado dele, encerra a própria captura de câmera/
+    // microfone (o servidor só consegue tirar o socket da sala de
+    // sinalização).
     socket.on("kick-from-meeting", ({ to }) => {
       const senderId = socketUsers.get(socket.id);
       const sender = onlineUsers[senderId];
 
       if (!sender || !to) {
+        return;
+      }
+
+      if (!isUserAdmin(senderId)) {
+        socket.emit("kick-denied", {
+          reason: "not-admin",
+        });
+        return;
+      }
+
+      const targetUser = getUserBySocketId(to);
+
+      if (
+        targetUser &&
+        isUserAdmin(targetUser.id)
+      ) {
+        socket.emit("kick-denied", {
+          reason: "target-is-admin",
+        });
         return;
       }
 
@@ -967,6 +988,23 @@ app.prepare().then(() => {
 
     socket.on("leave-meeting", () => {
       leaveCurrentCall(socket);
+    });
+
+    // Avisa explicitamente quem está na chamada que o compartilhamento de
+    // tela (re)começou — necessário sobretudo pra recompartilhar depois
+    // de parar uma vez (mesmo sender reusado via replaceTrack, sem
+    // renegociação nova, então sem esse aviso ninguém saberia que
+    // precisa voltar a mostrar o card).
+    socket.on("screen-share-started", () => {
+      const callKey = socketCallRoom.get(socket.id);
+
+      if (!callKey) {
+        return;
+      }
+
+      socket.to(callKey).emit("screen-share-started", {
+        socketId: socket.id,
+      });
     });
 
     // Avisa explicitamente quem está na chamada que o compartilhamento de

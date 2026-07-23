@@ -28,6 +28,7 @@ type RosterUser = {
   nome: string;
   avatarTipo?: string | null;
   avatarValor?: string | null;
+  isAdmin?: boolean;
 };
 
 type Props = {
@@ -37,6 +38,9 @@ type Props = {
   myNome?: string;
   myAvatarTipo?: string | null;
   myAvatarValor?: string | null;
+  // Só admin pode remover alguém da chamada — controla se o botão ❌
+  // aparece pra mim, e o servidor confere de novo antes de aceitar.
+  myIsAdmin?: boolean;
   roster?: RosterUser[];
   // Largura atual da barra lateral (Chat/Usuários) em app/office/page.tsx —
   // a barra da chamada reserva esse espaço pra não ficar por baixo dela, e
@@ -319,6 +323,146 @@ function RemoteAudio({
   );
 }
 
+// Tipagem mínima da Document Picture-in-Picture API (ainda não faz parte
+// do lib.dom.d.ts do TypeScript) — permite abrir MAIS de uma janela de
+// picture-in-picture ao mesmo tempo (uma por tela compartilhada), ao
+// contrário da API antiga de vídeo (video.requestPictureInPicture),
+// que só permite uma por vez no sistema inteiro.
+type DocumentPictureInPicture = {
+  requestWindow: (options?: {
+    width?: number;
+    height?: number;
+  }) => Promise<Window>;
+};
+
+function getDocumentPictureInPicture():
+  | DocumentPictureInPicture
+  | undefined {
+  return (
+    window as unknown as {
+      documentPictureInPicture?: DocumentPictureInPicture;
+    }
+  ).documentPictureInPicture;
+}
+
+// Botão de picture-in-picture pra uma tela compartilhada — usa a
+// Document Picture-in-Picture API quando o navegador suporta (permite
+// várias telas em PiP ao mesmo tempo, cada uma na sua própria janelinha
+// flutuante); sem suporte, cai pro PiP padrão de vídeo (só uma por vez,
+// abrir uma nova fecha a anterior — limitação do próprio navegador).
+function PipButton({
+  stream,
+  getVideoEl,
+  small = false,
+  label,
+  className,
+}: {
+  stream: MediaStream;
+  getVideoEl: () => HTMLVideoElement | null;
+  small?: boolean;
+  label?: string;
+  className?: string;
+}) {
+
+  async function handleClick(
+    event: React.MouseEvent
+  ) {
+
+    event.stopPropagation();
+
+    const docPip = getDocumentPictureInPicture();
+
+    if (docPip) {
+
+      try {
+
+        const pipWindow =
+          await docPip.requestWindow({
+            width: 480,
+            height: 270,
+          });
+
+        const video =
+          pipWindow.document.createElement(
+            "video"
+          );
+
+        video.srcObject = stream;
+        video.autoplay = true;
+        video.style.width = "100%";
+        video.style.height = "100%";
+        video.style.objectFit = "contain";
+        video.style.background = "#000";
+
+        pipWindow.document.body.style.margin =
+          "0";
+
+        pipWindow.document.body.appendChild(
+          video
+        );
+
+        return;
+
+      } catch (error) {
+
+        console.error(
+          "Erro ao abrir picture-in-picture:",
+          error
+        );
+
+      }
+
+    }
+
+    const el = getVideoEl() as
+      | (HTMLVideoElement & {
+          requestPictureInPicture?: () => Promise<unknown>;
+        })
+      | null;
+
+    if (
+      el &&
+      typeof el.requestPictureInPicture ===
+        "function"
+    ) {
+
+      try {
+        await el.requestPictureInPicture();
+      } catch (error) {
+        console.error(
+          "Erro ao abrir picture-in-picture:",
+          error
+        );
+      }
+
+    }
+
+  }
+
+  return (
+    <button
+      onClick={handleClick}
+      title="Picture-in-picture"
+      className={
+        className ??
+        `
+          rounded
+          bg-black/70
+          text-white
+          hover:bg-black/90
+          ${
+            small
+              ? "px-1 text-[10px]"
+              : "px-2 py-1 text-xs"
+          }
+        `
+      }
+    >
+      ⧉{label && ` ${label}`}
+    </button>
+  );
+}
+
 // Botão da barra de chamada — ícone em cima, rótulo embaixo, num "chip"
 // arredondado (mesma linguagem visual do Zoom/Meet), em vez de ícone e
 // texto lado a lado como antes.
@@ -378,6 +522,7 @@ export default function VideoMeeting({
   myNome,
   myAvatarTipo,
   myAvatarValor,
+  myIsAdmin = false,
   roster,
   sidebarWidthPx = 320,
   onOpenChat,
@@ -415,6 +560,25 @@ export default function VideoMeeting({
   // que aparecer depois é tratada como tela compartilhada.
   const remoteCameraStreamIdRef =
     useRef<Map<string, string>>(new Map());
+
+  // Guarda a stream de tela de cada participante remoto MESMO quando ela
+  // não está sendo mostrada (compartilhamento parado) — recompartilhar
+  // reaproveita o mesmo sender (replaceTrack), o que não dispara um novo
+  // "ontrack" do lado de quem recebe, então sem isso não teria como
+  // reexibir o card sem uma reconexão inteira.
+  const remoteScreenStreamRefs =
+    useRef<Map<string, MediaStream>>(
+      new Map()
+    );
+
+  // Elemento <video> de cada tela compartilhada (chave "local" ou o
+  // socket id de quem compartilha) — usado só pelo botão de
+  // picture-in-picture quando o navegador não suporta a Document
+  // Picture-in-Picture API (fallback pro PiP padrão de vídeo).
+  const screenVideoElsRef =
+    useRef<Map<string, HTMLVideoElement>>(
+      new Map()
+    );
 
   const joiningRef =
     useRef(false);
@@ -576,6 +740,10 @@ export default function VideoMeeting({
     );
 
     remoteCameraStreamIdRef.current.delete(
+      remoteSocketId
+    );
+
+    remoteScreenStreamRefs.current.delete(
       remoteSocketId
     );
 
@@ -769,6 +937,16 @@ export default function VideoMeeting({
 
         if (isScreenShare) {
 
+          // Guardado à parte (não só no state) — recompartilhar reusa o
+          // mesmo sender/transceiver (replaceTrack), o que não dispara
+          // um novo "ontrack" aqui. É esse valor guardado que os avisos
+          // explícitos de screen-share-started/stopped (mais embaixo)
+          // usam pra reexibir o card sem precisar de uma reconexão.
+          remoteScreenStreamRefs.current.set(
+            remoteSocketId,
+            incomingStream
+          );
+
           setRemoteScreenStreams((prev) => ({
             ...prev,
             [remoteSocketId]: incomingStream,
@@ -780,21 +958,6 @@ export default function VideoMeeting({
           setExpandedId(
             `${SCREEN_PREFIX}${remoteSocketId}`
           );
-
-          videoTrack.onmute = () => {
-            setRemoteScreenStreams((prev) => {
-              const next = { ...prev };
-              delete next[remoteSocketId];
-              return next;
-            });
-          };
-
-          videoTrack.onunmute = () => {
-            setRemoteScreenStreams((prev) => ({
-              ...prev,
-              [remoteSocketId]: incomingStream,
-            }));
-          };
 
           return;
         }
@@ -1099,6 +1262,7 @@ export default function VideoMeeting({
     videoSendersRef.current.clear();
     screenSendersRef.current.clear();
     remoteCameraStreamIdRef.current.clear();
+    remoteScreenStreamRefs.current.clear();
 
     setRemoteStreams({});
     setRemoteScreenStreams({});
@@ -1527,6 +1691,13 @@ export default function VideoMeeting({
 
       setSharingScreen(true);
 
+      // Avisa explicitamente que a tela (re)começou a ser compartilhada
+      // — necessário sobretudo pra recompartilhar depois de ter parado
+      // uma vez: como o sender já existe, isso reusa replaceTrack (não
+      // dispara um novo "ontrack" pra quem recebe), então sem esse aviso
+      // ninguém saberia que precisa voltar a mostrar o card.
+      getSocket().emit("screen-share-started");
+
     } catch (error) {
 
       console.error(
@@ -1794,6 +1965,7 @@ export default function VideoMeeting({
       videoSendersRef.current.clear();
       screenSendersRef.current.clear();
       remoteCameraStreamIdRef.current.clear();
+      remoteScreenStreamRefs.current.clear();
 
       setRemoteStreams({});
       setRemoteScreenStreams({});
@@ -1856,6 +2028,23 @@ export default function VideoMeeting({
     );
 
     socket.on(
+      "kick-denied",
+      ({
+        reason,
+      }: {
+        reason: string;
+      }) => {
+
+        onNotify?.(
+          reason === "target-is-admin"
+            ? "Não é possível remover um administrador da chamada."
+            : "Só administradores podem remover alguém da chamada."
+        );
+
+      }
+    );
+
+    socket.on(
       "mic-state-changed",
       ({
         socketId,
@@ -1891,6 +2080,40 @@ export default function VideoMeeting({
           ...prev,
           [socketId]: !remoteCameraOn,
         }));
+
+      }
+    );
+
+    // Avisa que um participante voltou a compartilhar a tela — cobre o
+    // caso de recompartilhar depois de ter parado (mesmo sender reusado
+    // via replaceTrack, sem "ontrack" novo). Reexibe a partir do que já
+    // foi guardado em remoteScreenStreamRefs quando a tela apareceu a
+    // primeira vez.
+    socket.on(
+      "screen-share-started",
+      ({
+        socketId,
+      }: {
+        socketId: string;
+      }) => {
+
+        const stream =
+          remoteScreenStreamRefs.current.get(
+            socketId
+          );
+
+        if (!stream) {
+          return;
+        }
+
+        setRemoteScreenStreams((prev) => ({
+          ...prev,
+          [socketId]: stream,
+        }));
+
+        setExpandedId(
+          `${SCREEN_PREFIX}${socketId}`
+        );
 
       }
     );
@@ -2204,8 +2427,10 @@ export default function VideoMeeting({
       socket.off("ice-candidate");
       socket.off("muted-by-someone");
       socket.off("kicked-from-meeting");
+      socket.off("kick-denied");
       socket.off("mic-state-changed");
       socket.off("camera-state-changed");
+      socket.off("screen-share-started");
       socket.off("screen-share-stopped");
       socket.off(
         "connect",
@@ -2468,7 +2693,7 @@ export default function VideoMeeting({
 
             {screenStream && (
 
-              <div className="flex w-full flex-col items-center">
+              <div className="relative flex w-full flex-col items-center">
 
                 <VideoTile
                   stream={screenStream}
@@ -2478,7 +2703,31 @@ export default function VideoMeeting({
                       `${SCREEN_PREFIX}local`
                     )
                   }
+                  onElement={(el) => {
+                    if (el) {
+                      screenVideoElsRef.current.set(
+                        "local",
+                        el
+                      );
+                    } else {
+                      screenVideoElsRef.current.delete(
+                        "local"
+                      );
+                    }
+                  }}
                 />
+
+                <div className="absolute bottom-6 right-1">
+                  <PipButton
+                    stream={screenStream}
+                    getVideoEl={() =>
+                      screenVideoElsRef.current.get(
+                        "local"
+                      ) ?? null
+                    }
+                    small
+                  />
+                </div>
 
                 <span
                   className="
@@ -2614,25 +2863,30 @@ export default function VideoMeeting({
                       🔇
                     </button>
 
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        kickParticipant(
-                          socketId
-                        );
-                      }}
-                      title="Remover da chamada"
-                      className="
-                        rounded
-                        bg-black/70
-                        px-1
-                        text-[10px]
-                        text-white
-                        hover:bg-black/90
-                      "
-                    >
-                      ❌
-                    </button>
+                    {myIsAdmin &&
+                      !remoteUser?.isAdmin && (
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            kickParticipant(
+                              socketId
+                            );
+                          }}
+                          title="Remover da chamada"
+                          className="
+                            rounded
+                            bg-black/70
+                            px-1
+                            text-[10px]
+                            text-white
+                            hover:bg-black/90
+                          "
+                        >
+                          ❌
+                        </button>
+
+                      )}
 
                   </div>
 
@@ -2660,7 +2914,7 @@ export default function VideoMeeting({
 
                   <div
                     key={`screen-${socketId}`}
-                    className="flex w-full flex-col items-center"
+                    className="relative flex w-full flex-col items-center"
                   >
 
                     <VideoTile
@@ -2671,7 +2925,31 @@ export default function VideoMeeting({
                           `${SCREEN_PREFIX}${socketId}`
                         )
                       }
+                      onElement={(el) => {
+                        if (el) {
+                          screenVideoElsRef.current.set(
+                            socketId,
+                            el
+                          );
+                        } else {
+                          screenVideoElsRef.current.delete(
+                            socketId
+                          );
+                        }
+                      }}
                     />
+
+                    <div className="absolute bottom-6 right-1">
+                      <PipButton
+                        stream={remoteScreenStream}
+                        getVideoEl={() =>
+                          screenVideoElsRef.current.get(
+                            socketId
+                          ) ?? null
+                        }
+                        small
+                      />
+                    </div>
 
                     <span
                       className="
@@ -3030,6 +3308,20 @@ export default function VideoMeeting({
             >
               ⛶ Tela cheia
             </button>
+
+            {isExpandedScreen &&
+              expandedStream && (
+
+                <PipButton
+                  stream={expandedStream}
+                  getVideoEl={() =>
+                    expandedVideoRef.current
+                  }
+                  label="Picture-in-picture"
+                  className="text-sm text-white hover:underline"
+                />
+
+              )}
 
           </div>
 

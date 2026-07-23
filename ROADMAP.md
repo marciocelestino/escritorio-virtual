@@ -278,6 +278,23 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   e a conversa não está aberta — e autocomplete de @menção (digitar "@"
   sugere nomes de verdade em vez de precisar acertar o primeiro nome de
   cabeça), tanto no chat de sala quanto nas conversas privadas.
+- **Corrige: recompartilhar tela na mesma chamada não aparecia pros
+  outros**: parar e depois compartilhar de novo reusa o mesmo canal de
+  envio (não dispara sinalização nova de vídeo), então dependia só do
+  navegador de quem recebia perceber a volta — não confiável o
+  bastante. Agora tem um aviso explícito de "compartilhamento
+  (re)começou" pelo socket, no mesmo molde do que já existia pro fim do
+  compartilhamento.
+- **Picture-in-picture pra tela compartilhada**: tanto no card da fita
+  quanto no modal que abre ao clicar. Usa a Document Picture-in-Picture
+  API do navegador quando disponível — permite várias telas
+  compartilhadas em PiP ao mesmo tempo, cada uma na sua janelinha; sem
+  suporte a essa API, cai pro PiP padrão do navegador (aí só uma por
+  vez, limitação do próprio navegador, não do app).
+- **Só admin remove alguém da chamada, e admin não pode ser removido**:
+  antes qualquer participante podia expulsar qualquer outro. Agora o
+  botão ❌ só aparece pra quem é admin, nunca aparece pra remover outro
+  admin, e o servidor confere de novo (não só o cliente).
 
 ## Ainda por fazer
 

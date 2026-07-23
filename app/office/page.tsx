@@ -1242,6 +1242,7 @@ setCurrentUserId(
             myNome={myself?.nome}
             myAvatarTipo={myself?.avatarTipo}
             myAvatarValor={myself?.avatarValor}
+            myIsAdmin={myself?.isAdmin}
             roster={allUsers}
             sidebarWidthPx={
               barraLateralFechada ? 0 : 320
