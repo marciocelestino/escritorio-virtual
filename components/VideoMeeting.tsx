@@ -302,20 +302,6 @@ export default function VideoMeeting({
   const micOnRef =
     useRef(true);
 
-  // Arrastar/redimensionar o dock: null em dockPos significa "ainda não
-  // foi movido", usa a posição padrão via CSS (canto inferior direito).
-  const dockRef =
-    useRef<HTMLDivElement>(null);
-
-  const draggingRef =
-    useRef(false);
-
-  const resizingRef =
-    useRef(false);
-
-  const dragOffsetRef =
-    useRef({ x: 0, y: 0 });
-
   // Detecção de quem está falando: um AnalyserNode por participante (local
   // e remotos), nunca conectado ao destino de áudio — só lemos o volume,
   // sem tocar o som de volta (senão o próprio microfone ecoaria).
@@ -397,195 +383,6 @@ export default function VideoMeeting({
 
   const [selectedSpeakerId, setSelectedSpeakerId] =
     useState("");
-
-  const [dockPos, setDockPos] =
-    useState<{
-      x: number;
-      y: number;
-    } | null>(() => {
-
-      if (typeof window === "undefined") {
-        return null;
-      }
-
-      try {
-
-        const saved = localStorage.getItem(
-          "callDockPos"
-        );
-
-        return saved ? JSON.parse(saved) : null;
-
-      } catch {
-        return null;
-      }
-
-    });
-
-  const [dockSize, setDockSize] =
-    useState<{
-      width: number;
-      height: number;
-    }>(() => {
-
-      const fallback = {
-        width: 320,
-        height: 420,
-      };
-
-      if (typeof window === "undefined") {
-        return fallback;
-      }
-
-      try {
-
-        const saved = localStorage.getItem(
-          "callDockSize"
-        );
-
-        return saved
-          ? JSON.parse(saved)
-          : fallback;
-
-      } catch {
-        return fallback;
-      }
-
-    });
-
-  useEffect(() => {
-
-    if (dockPos) {
-      localStorage.setItem(
-        "callDockPos",
-        JSON.stringify(dockPos)
-      );
-    }
-
-  }, [dockPos]);
-
-  useEffect(() => {
-
-    localStorage.setItem(
-      "callDockSize",
-      JSON.stringify(dockSize)
-    );
-
-  }, [dockSize]);
-
-  useEffect(() => {
-
-    function handleMouseMove(
-      event: MouseEvent
-    ) {
-
-      if (draggingRef.current) {
-
-        setDockPos({
-          x:
-            event.clientX -
-            dragOffsetRef.current.x,
-          y:
-            event.clientY -
-            dragOffsetRef.current.y,
-        });
-
-      }
-
-      if (resizingRef.current) {
-
-        const rect =
-          dockRef.current?.getBoundingClientRect();
-
-        if (rect) {
-
-          setDockSize({
-            width: Math.min(
-              560,
-              Math.max(
-                260,
-                event.clientX - rect.left
-              )
-            ),
-            height: Math.min(
-              window.innerHeight - 40,
-              Math.max(
-                200,
-                event.clientY - rect.top
-              )
-            ),
-          });
-
-        }
-
-      }
-
-    }
-
-    function handleMouseUp() {
-      draggingRef.current = false;
-      resizingRef.current = false;
-    }
-
-    window.addEventListener(
-      "mousemove",
-      handleMouseMove
-    );
-
-    window.addEventListener(
-      "mouseup",
-      handleMouseUp
-    );
-
-    return () => {
-
-      window.removeEventListener(
-        "mousemove",
-        handleMouseMove
-      );
-
-      window.removeEventListener(
-        "mouseup",
-        handleMouseUp
-      );
-
-    };
-
-  }, []);
-
-  function handleDockHeaderMouseDown(
-    event: React.MouseEvent
-  ) {
-
-    const rect =
-      dockRef.current?.getBoundingClientRect();
-
-    if (!rect) {
-      return;
-    }
-
-    draggingRef.current = true;
-
-    dragOffsetRef.current = {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
-    };
-
-    setDockPos({
-      x: rect.left,
-      y: rect.top,
-    });
-
-  }
-
-  function handleDockResizeMouseDown(
-    event: React.MouseEvent
-  ) {
-
-    event.stopPropagation();
-    resizingRef.current = true;
-
-  }
 
   function removePeer(
     remoteSocketId: string
@@ -1900,48 +1697,40 @@ export default function VideoMeeting({
     (joined ? 1 : 0) +
     remoteEntries.length;
 
+  // Colunas da grade expandida: escala com o número de participantes em
+  // vez de forçar uma coluna única (que virava uma lista enorme e
+  // ilegível assim que a sala passou a caber até 15 pessoas).
+  const gridColumns =
+    participantCount <= 2
+      ? 1
+      : participantCount <= 4
+      ? 2
+      : participantCount <= 9
+      ? 3
+      : participantCount <= 16
+      ? 4
+      : 5;
+
+  const anyoneSpeaking = speakingIds.size > 0;
+
   return (
 
     <>
 
-    <div
-      ref={dockRef}
-      className={`
-        fixed
-        z-40
-        overflow-y-auto
-        rounded-2xl
-        border
-        bg-white
-        p-4
-        shadow-xl
-        ${
-          dockPos
-            ? ""
-            : "bottom-4 right-4"
-        }
-      `}
-      style={{
-        width: `${dockSize.width}px`,
-        maxHeight: `${dockSize.height}px`,
-        ...(dockPos
-          ? {
-              left: `${dockPos.x}px`,
-              top: `${dockPos.y}px`,
-            }
-          : {}),
-      }}
-    >
+    {!joined && (
 
       <div
-        onMouseDown={handleDockHeaderMouseDown}
         className="
-          flex
-          cursor-move
-          select-none
-          items-center
-          justify-between
-          gap-2
+          fixed
+          bottom-4
+          right-4
+          z-40
+          w-72
+          rounded-2xl
+          border
+          bg-white
+          p-4
+          shadow-xl
         "
       >
 
@@ -1953,112 +1742,184 @@ export default function VideoMeeting({
             text-slate-900
           "
         >
-          ⠿ 🎥 {room}
+          🎥 {room}
         </h3>
 
-        {joined && (
+        {autoJoin && (
+
+          <p className="mt-3 text-xs text-slate-500">
+            🚪 Conectando áudio automaticamente
+            (portas abertas)...
+          </p>
+
+        )}
+
+        {!autoJoin && (
 
           <button
-            onClick={() =>
-              setMinimized((current) => !current)
-            }
-            onMouseDown={(e) =>
-              e.stopPropagation()
-            }
-            title={
-              minimized
-                ? "Expandir chamada"
-                : "Minimizar chamada"
-            }
+            onClick={() => joinMeeting()}
             className="
-              shrink-0
-              text-xs
-              text-slate-400
-              hover:text-slate-600
+              mt-3
+              rounded-lg
+              bg-blue-600
+              px-4
+              py-2
+              text-sm
+              text-white
             "
           >
-            {minimized ? "▸" : "▾"}
+            Entrar na Chamada
           </button>
 
         )}
 
       </div>
 
-      {viewingDifferentRoom &&
-        onGoToCallRoom && (
+    )}
 
-          <button
-            onClick={onGoToCallRoom}
-            className="
-              mt-1
-              text-xs
-              text-blue-600
-              hover:underline
-            "
-          >
-            ↩️ Voltar pra sala da chamada
-          </button>
+    {joined && minimized && (
 
-        )}
+      <button
+        onClick={() => setMinimized(false)}
+        title="Expandir chamada"
+        className="
+          fixed
+          bottom-4
+          right-4
+          z-40
+          flex
+          items-center
+          gap-2
+          rounded-full
+          border
+          bg-white
+          px-4
+          py-2
+          text-sm
+          font-medium
+          text-slate-700
+          shadow-xl
+          hover:bg-slate-50
+        "
+      >
 
-      {!joined && autoJoin && (
+        <span
+          className={`
+            h-2
+            w-2
+            rounded-full
+            ${
+              anyoneSpeaking
+                ? "bg-green-500"
+                : "bg-slate-300"
+            }
+          `}
+        />
 
-        <p className="mt-3 text-xs text-slate-500">
-          🚪 Conectando áudio automaticamente
-          (portas abertas)...
-        </p>
+        🎥 {participantCount} participante(s)
+        {" "}· {room}
 
-      )}
+      </button>
 
-      {!joined && !autoJoin && (
+    )}
 
-        <button
-          onClick={() => joinMeeting()}
-          className="
-            mt-3
-            rounded-lg
-            bg-blue-600
-            px-4
-            py-2
-            text-sm
-            text-white
-          "
-        >
-          Entrar na Chamada
-        </button>
+    {joined && !minimized && (
 
-      )}
-
-      {joined && minimized && (
-
-        <p className="mt-2 text-xs text-slate-500">
-          {participantCount} participante(s) —
-          chamada em andamento
-        </p>
-
-      )}
-
-      {joined && (
+      <div
+        className="
+          fixed
+          inset-x-6
+          bottom-6
+          z-40
+          flex
+          h-[75vh]
+          max-h-[720px]
+          flex-col
+          rounded-2xl
+          border
+          bg-white
+          p-4
+          shadow-2xl
+        "
+      >
 
         <div
-          style={{
-            display: minimized
-              ? "none"
-              : undefined,
-          }}
+          className="
+            flex
+            items-start
+            justify-between
+            gap-2
+          "
         >
 
-          <p className="mb-2 mt-3 text-xs text-slate-400">
-            Clique em um vídeo para ver maior.
-          </p>
+          <div>
 
-          <div
+            <h3
+              className="
+                text-sm
+                font-semibold
+                text-slate-900
+              "
+            >
+              🎥 {room} · {participantCount}
+              {" "}participante(s)
+            </h3>
+
+            {viewingDifferentRoom &&
+              onGoToCallRoom && (
+
+                <button
+                  onClick={onGoToCallRoom}
+                  className="
+                    mt-1
+                    text-xs
+                    text-blue-600
+                    hover:underline
+                  "
+                >
+                  ↩️ Voltar pra sala da chamada
+                </button>
+
+              )}
+
+          </div>
+
+          <button
+            onClick={() => setMinimized(true)}
+            title="Minimizar chamada"
             className="
-              grid
-              grid-cols-1
-              gap-3
+              shrink-0
+              rounded-lg
+              border
+              border-slate-300
+              px-2
+              py-1
+              text-xs
+              text-slate-500
+              hover:bg-slate-50
             "
           >
+            ▾ Minimizar
+          </button>
+
+        </div>
+
+        <p className="mb-2 mt-2 shrink-0 text-xs text-slate-400">
+          Clique em um vídeo para ver maior.
+        </p>
+
+        <div
+          className="
+            grid
+            flex-1
+            content-start
+            gap-3
+            overflow-y-auto
+          "
+          style={{
+            gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+          }}
+        >
 
             <div>
 
@@ -2376,25 +2237,6 @@ export default function VideoMeeting({
         </div>
 
       )}
-
-      <div
-        onMouseDown={handleDockResizeMouseDown}
-        title="Redimensionar"
-        className="
-          absolute
-          bottom-1
-          right-1
-          h-4
-          w-4
-          cursor-nwse-resize
-          text-slate-300
-          hover:text-slate-500
-        "
-      >
-        ⤡
-      </div>
-
-    </div>
 
     {expandedStream && (
 

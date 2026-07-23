@@ -38,9 +38,6 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   navegar de volta até ela.
 - **Selo de "mutado" também pro próprio usuário**: o selo 🔇 agora
   aparece no seu próprio card na chamada, não só nos dos outros.
-- **Mover e redimensionar o dock da chamada**: dá pra arrastar pela
-  barra de título pra outro canto e ajustar o tamanho pelo canto —
-  posição e tamanho ficam salvos entre sessões.
 - **Mais assentos na Sala de Reunião**: 6 → 15 lugares, em 3 fileiras de
   5 voltadas pra mesa, no lugar do antigo frente-a-frente.
 - **Remover um usuário da chamada**: botão ❌ ao lado de cada participante
@@ -50,6 +47,11 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   de entrada e saída durante a chamada (troca de alto-falante só
   funciona em navegadores baseados em Chromium, por depender de
   `setSinkId`).
+- **Chamada escala pra muita gente**: minimizada é só uma pastilha no
+  canto (contagem de participantes + indicador de quem fala); ao
+  expandir, abre um painel grande com grade responsiva (1 a 5 colunas
+  conforme o número de participantes) em vez da antiga lista vertical
+  de 1 coluna, que virava um scroll enorme com muita gente na chamada.
 
 ## Ainda por fazer
 
