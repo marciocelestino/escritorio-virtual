@@ -35,15 +35,18 @@ type Props = {
 
 // Marcação pequena pra quem está offline — mostra que a pessoa existe no
 // sistema, mas sem abrir a sala inteira dela (só aparece de verdade
-// quando ela conecta).
+// quando ela conecta). Clicável pra cutucar mesmo offline — o cutucão
+// fica pendente e vira uma mensagem no chat direto quando ela voltar.
 function OfflineUserMarker({
   nome,
   avatarTipo,
   avatarValor,
+  onClick,
 }: {
   nome: string;
   avatarTipo?: string | null;
   avatarValor?: string | null;
+  onClick: () => void;
 }) {
 
   const initials =
@@ -55,8 +58,9 @@ function OfflineUserMarker({
       .toUpperCase() || "?";
 
   return (
-    <div
-      title={`${nome} · offline`}
+    <button
+      onClick={onClick}
+      title={`Cutucar ${nome} (offline)`}
       className="
         flex
         w-20
@@ -71,6 +75,8 @@ function OfflineUserMarker({
         px-2
         py-2
         opacity-60
+        transition
+        hover:opacity-90
       "
     >
 
@@ -140,7 +146,7 @@ function OfflineUserMarker({
         {nome}
       </span>
 
-    </div>
+    </button>
   );
 }
 
@@ -341,6 +347,12 @@ export default function OfficeMap({
                 }
                 avatarValor={
                   owner.avatarValor
+                }
+                onClick={() =>
+                  onUserClick(
+                    owner.id,
+                    owner.nome
+                  )
                 }
               />
 

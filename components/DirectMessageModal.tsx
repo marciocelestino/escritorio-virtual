@@ -265,38 +265,51 @@ export default function DirectMessageModal({
 
           )}
 
-          {messages.map((msg) => (
+          {messages.map((msg) =>
 
-            <div
-              key={msg.id}
-              className="text-sm"
-            >
+            msg.system ? (
 
-              <span className="font-semibold text-slate-800 dark:text-slate-100">
-                {msg.fromId === currentUserId
-                  ? "Você"
-                  : msg.fromNome}
-              </span>
-
-              <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
-                {new Date(
-                  msg.at
-                ).toLocaleTimeString(
-                  "pt-BR",
-                  {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  }
-                )}
-              </span>
-
-              <p className="break-words text-slate-600 dark:text-slate-300">
-                {msg.message}
+              <p
+                key={msg.id}
+                className="text-center text-xs italic text-slate-400 dark:text-slate-500"
+              >
+                🔔 {msg.message}
               </p>
 
-            </div>
+            ) : (
 
-          ))}
+              <div
+                key={msg.id}
+                className="text-sm"
+              >
+
+                <span className="font-semibold text-slate-800 dark:text-slate-100">
+                  {msg.fromId === currentUserId
+                    ? "Você"
+                    : msg.fromNome}
+                </span>
+
+                <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
+                  {new Date(
+                    msg.at
+                  ).toLocaleTimeString(
+                    "pt-BR",
+                    {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }
+                  )}
+                </span>
+
+                <p className="break-words text-slate-600 dark:text-slate-300">
+                  {msg.message}
+                </p>
+
+              </div>
+
+            )
+
+          )}
 
           <div ref={messagesEndRef} />
 

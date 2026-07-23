@@ -3,6 +3,7 @@ type Props = {
   status?: string;
   onInvite?: () => void;
   onOpenDm?: () => void;
+  unreadDmCount?: number;
 };
 
 export default function UserCard({
@@ -10,6 +11,7 @@ export default function UserCard({
   status,
   onInvite,
   onOpenDm,
+  unreadDmCount = 0,
 }: Props) {
   const getStatusIcon = () => {
     switch (status) {
@@ -75,6 +77,7 @@ export default function UserCard({
             onClick={onOpenDm}
             title={`Mensagem direta para ${nome}`}
             className="
+              relative
               rounded-lg
               border
               border-slate-300
@@ -89,6 +92,32 @@ export default function UserCard({
             "
           >
             💬
+
+            {unreadDmCount > 0 && (
+              <span
+                className="
+                  absolute
+                  -right-1.5
+                  -top-1.5
+                  flex
+                  h-4
+                  min-w-4
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-red-600
+                  px-1
+                  text-[10px]
+                  font-bold
+                  leading-none
+                  text-white
+                "
+              >
+                {unreadDmCount > 9
+                  ? "9+"
+                  : unreadDmCount}
+              </span>
+            )}
           </button>
         )}
 

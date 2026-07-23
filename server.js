@@ -104,6 +104,11 @@ app.prepare().then(() => {
   // único) na primeira troca de sala bem-sucedida pra aquela sala.
   const allowedGuests = new Map();
 
+  // Cutucões recebidos enquanto o alvo estava offline — chave
+  // "remetente:alvo", valor a contagem. Consumido (some) assim que o
+  // alvo conecta, virando uma mensagem no chat direto entre os dois.
+  const pendingPokes = new Map();
+
   function getUserBySocketId(socketId) {
     return Object.values(onlineUsers).find(
       (user) => user.socketId === socketId
@@ -395,6 +400,78 @@ app.prepare().then(() => {
       io.emit("presence-update", Object.values(onlineUsers));
 
       console.log("Entrou:", user.nome);
+
+      // Cutucões recebidos enquanto estava offline: um por remetente,
+      // virando uma mensagem no chat direto entre os dois (aparece pra
+      // ambos quando abrirem essa conversa, e chega na hora se algum
+      // dos dois estiver com ela aberta agora).
+      const incomingPokeKeys = Array.from(
+        pendingPokes.keys()
+      ).filter((key) =>
+        key.endsWith(`:${user.id}`)
+      );
+
+      if (incomingPokeKeys.length > 0) {
+
+        const allUsers = loadAllUsersFromDisk();
+
+        incomingPokeKeys.forEach((key) => {
+
+          const fromId = Number(
+            key.split(":")[0]
+          );
+
+          const count = pendingPokes.get(key);
+
+          pendingPokes.delete(key);
+
+          const fromUser = allUsers.find(
+            (u) => u.id === fromId
+          );
+
+          if (!fromUser) {
+            return;
+          }
+
+          const record = addMessage({
+            id: `${Date.now()}-${Math.random()
+              .toString(36)
+              .slice(2)}`,
+            conversationKey: dmConversationKey(
+              fromId,
+              user.id
+            ),
+            kind: "dm",
+            room: null,
+            toUserId: user.id,
+            fromId,
+            fromNome: fromUser.nome,
+            message: `${fromUser.nome} cutucou ${
+              user.nome
+            } ${count} ${
+              count === 1 ? "vez" : "vezes"
+            } enquanto estava offline.`,
+            at: Date.now(),
+            system: true,
+          });
+
+          io.to(socket.id).emit(
+            "dm-message",
+            record
+          );
+
+          const fromOnline =
+            onlineUsers[fromId];
+
+          if (fromOnline) {
+            io.to(
+              fromOnline.socketId
+            ).emit("dm-message", record);
+          }
+
+        });
+
+      }
     });
 
     socket.on("room-change", ({ userId, room }) => {
@@ -610,16 +687,38 @@ app.prepare().then(() => {
     socket.on("poke", ({ to }) => {
       const senderId = socketUsers.get(socket.id);
       const sender = onlineUsers[senderId];
-      const target = onlineUsers[to];
 
-      if (!sender || !target) {
+      if (!sender || !to) {
         return;
       }
 
-      io.to(target.socketId).emit("poked", {
-        fromId: sender.id,
-        fromNome: sender.nome,
-      });
+      const target = onlineUsers[to];
+
+      if (target) {
+        io.to(target.socketId).emit("poked", {
+          fromId: sender.id,
+          fromNome: sender.nome,
+        });
+        return;
+      }
+
+      // Alvo offline: só guarda a contagem se for mesmo um usuário que
+      // existe (não deixa acumular cutucão pra id inventado) — vira uma
+      // mensagem no chat direto entre os dois quando ele conectar.
+      const targetExists = loadAllUsersFromDisk().some(
+        (u) => u.id === to
+      );
+
+      if (!targetExists) {
+        return;
+      }
+
+      const key = `${senderId}:${to}`;
+
+      pendingPokes.set(
+        key,
+        (pendingPokes.get(key) || 0) + 1
+      );
     });
 
     // Chat de texto por sala — sem histórico persistente (só existe

@@ -136,6 +136,28 @@ export default function OfficePage() {
       activeDm?.id ?? null;
   }, [activeDm]);
 
+  // Quantas mensagens diretas não lidas de cada pessoa — mostrado como
+  // selo no botão 💬 dela na lista "Online". Zera ao abrir a conversa.
+  const [unreadDms, setUnreadDms] = useState<
+    Record<number, number>
+  >({});
+
+  function openDm(user: {
+    id: number;
+    nome: string;
+    avatarTipo?: string | null;
+    avatarValor?: string | null;
+  }) {
+
+    setActiveDm(user);
+
+    setUnreadDms((prev) => ({
+      ...prev,
+      [user.id]: 0,
+    }));
+
+  }
+
   // Pedido de entrada aceito, aguardando ser processado — não dá pra
   // chamar moveToRoom/chooseSeat direto de dentro do handler de socket
   // (registrado uma única vez no mount, com closure presa no
@@ -865,6 +887,12 @@ socket.on(
         )}`
       );
 
+      setUnreadDms((prev) => ({
+        ...prev,
+        [otherPartyId]:
+          (prev[otherPartyId] ?? 0) + 1,
+      }));
+
     }
 
   }
@@ -1501,10 +1529,13 @@ setCurrentUserId(
                 key={user.id}
                 nome={user.nome}
                 status={user.status}
+                unreadDmCount={
+                  unreadDms[user.id] ?? 0
+                }
                 onOpenDm={
                   user.id !== currentUserId
                     ? () =>
-                        setActiveDm({
+                        openDm({
                           id: user.id,
                           nome: user.nome,
                           avatarTipo:

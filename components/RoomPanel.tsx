@@ -22,6 +22,9 @@ export type ChatMessage = {
   fromNome: string;
   message: string;
   at: number;
+  // Mensagem gerada pelo sistema (ex.: aviso de cutucão perdido enquanto
+  // offline) — mostrada sem avatar/nome, num estilo mais discreto.
+  system?: boolean;
 };
 
 type Props = {
@@ -217,7 +220,18 @@ export default function RoomPanel({
 
             )}
 
-            {messages.map((msg) => (
+            {messages.map((msg) =>
+
+              msg.system ? (
+
+                <p
+                  key={msg.id}
+                  className="text-center text-xs italic text-slate-400 dark:text-slate-500"
+                >
+                  🔔 {msg.message}
+                </p>
+
+              ) : (
 
               <div
                 key={msg.id}

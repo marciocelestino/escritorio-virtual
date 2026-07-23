@@ -295,6 +295,18 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   antes qualquer participante podia expulsar qualquer outro. Agora o
   botão ❌ só aparece pra quem é admin, nunca aparece pra remover outro
   admin, e o servidor confere de novo (não só o cliente).
+- **Selo de mensagens não lidas no botão 💬**: mostra de 1 a 9, e "9+"
+  a partir daí — zera assim que abre a conversa com a pessoa.
+- **Cutucar gente offline**: antes só dava pra cutucar quem estava
+  online. Agora dá pra cutucar mesmo offline (clicando na marcação dela
+  no mapa) — quando ela conectar, aparece uma mensagem no chat direto
+  entre os dois avisando quantas vezes foi cutucada enquanto estava
+  fora, uma por remetente.
+- **Entra na chamada com câmera e microfone desligados**: antes a
+  câmera ligava sozinha ao entrar (pedindo permissão de vídeo na
+  hora). Agora todo mundo entra com os dois desligados por padrão, e
+  liga manualmente quando quiser — mesmo mecanismo que já existia só
+  pra quem entrava via portas abertas, virou o padrão geral.
 
 ## Ainda por fazer
 

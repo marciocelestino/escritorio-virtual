@@ -1298,61 +1298,31 @@ export default function VideoMeeting({
 
     try {
 
-      let mediaStream: MediaStream;
-      let joinedAudioOnly = Boolean(
-        options.audioOnly
-      );
+      // Entra sempre com a câmera desligada por padrão — só pede
+      // microfone aqui, a pessoa liga a câmera manualmente quando
+      // quiser (mesmo mecanismo que já existia pra quem entrava só com
+      // áudio via portas abertas, agora é o padrão pra todo mundo). Isso
+      // também evita todo o tratamento de "câmera não encontrada" nesse
+      // momento — só fica o de microfone, que é sempre pedido.
+      const mediaStream =
+        await navigator.mediaDevices.getUserMedia({
+          video: false,
+          audio: true,
+        });
 
-      try {
+      const audioTrack =
+        mediaStream.getAudioTracks()[0];
 
-        mediaStream =
-          await navigator.mediaDevices.getUserMedia({
-            video: !options.audioOnly,
-            audio: true,
-          });
-
-      } catch (error) {
-
-        // Muitos computadores de escritório não têm câmera (só monitor +
-        // teclado), e sem isso o pedido acima falha por inteiro — mesmo a
-        // pessoa tendo microfone e podendo entrar só com áudio. Se o pedido
-        // era por câmera e o motivo foi falta/uso indevido do dispositivo
-        // de vídeo (não recusa de permissão), tenta de novo só com áudio
-        // em vez de simplesmente barrar a entrada na chamada.
-        const errorName = (
-          error as DOMException
-        )?.name;
-
-        const cameraUnavailable =
-          !options.audioOnly &&
-          (errorName === "NotFoundError" ||
-            errorName === "NotReadableError" ||
-            errorName === "OverconstrainedError");
-
-        if (!cameraUnavailable) {
-          throw error;
-        }
-
-        mediaStream =
-          await navigator.mediaDevices.getUserMedia({
-            video: false,
-            audio: true,
-          });
-
-        joinedAudioOnly = true;
-
-        onNotify?.(
-          "📷 Câmera não encontrada — você entrou na chamada só com áudio."
-        );
-
+      if (audioTrack) {
+        audioTrack.enabled = false;
       }
 
       localStreamRef.current =
         mediaStream;
 
       setStream(mediaStream);
-      setCameraOn(!joinedAudioOnly);
-      setMicOn(true);
+      setCameraOn(false);
+      setMicOn(false);
       setAutoJoined(
         Boolean(options.audioOnly)
       );
@@ -1366,31 +1336,39 @@ export default function VideoMeeting({
         { room }
       );
 
+      // Avisa quem já está na chamada que já entro com câmera e
+      // microfone desligados — sem isso, o selo de "mutado" só
+      // apareceria pros outros na primeira vez que eu mesmo
+      // ligasse/desligasse alguma coisa.
+      socket.emit("mic-state", {
+        micOn: false,
+      });
+
+      socket.emit("camera-state", {
+        cameraOn: false,
+      });
+
     } catch (error) {
 
       console.error(
-        "Erro ao acessar câmera/microfone:",
+        "Erro ao acessar microfone:",
         error
       );
 
-      if (!options.audioOnly) {
+      const errorName = (
+        error as DOMException
+      )?.name;
 
-        const errorName = (
-          error as DOMException
-        )?.name;
+      const message =
+        errorName === "NotFoundError"
+          ? "Nenhum microfone encontrado neste computador."
+          : errorName === "NotAllowedError"
+          ? "Permissão de microfone negada. Verifique as permissões do site no navegador."
+          : errorName === "NotReadableError"
+          ? "O microfone já está sendo usado por outro programa."
+          : "Não foi possível acessar o microfone.";
 
-        const message =
-          errorName === "NotFoundError"
-            ? "Nenhuma câmera ou microfone encontrado neste computador."
-            : errorName === "NotAllowedError"
-            ? "Permissão de câmera/microfone negada. Verifique as permissões do site no navegador."
-            : errorName === "NotReadableError"
-            ? "A câmera ou microfone já está sendo usado por outro programa."
-            : "Não foi possível acessar câmera ou microfone.";
-
-        alert(message);
-
-      }
+      alert(message);
 
     } finally {
 
