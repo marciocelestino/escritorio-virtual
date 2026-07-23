@@ -1,3 +1,42 @@
+// Selo colorido por tipo de sala (ícone num círculo), no lugar do emoji
+// solto no título — mesma ideia do mockup enviado.
+export function RoomBadge({
+  icon,
+  colorClass,
+}: {
+  icon: string;
+  colorClass: string;
+}) {
+  return (
+    <span
+      className={`
+        flex
+        h-7
+        w-7
+        shrink-0
+        items-center
+        justify-center
+        rounded-full
+        text-sm
+        ${colorClass}
+      `}
+    >
+      {icon}
+    </span>
+  );
+}
+
+export const ROOM_BADGE_COLORS = {
+  recepcao:
+    "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300",
+  reuniao:
+    "bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300",
+  natureza:
+    "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
+  pessoal:
+    "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
+};
+
 // Lugar vazio e clicável — clicar senta o usuário atual ali. Mantém o
 // mesmo formato de posicionamento (x/y absolutos) do PositionedAvatar
 // pra poder trocar um pelo outro sem mexer no layout da sala.

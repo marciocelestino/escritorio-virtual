@@ -114,16 +114,26 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   "@primeironome" da própria pessoa em qualquer chat de sala — mostra
   um contador e uma lista curta das últimas menções, clicar leva até a
   sala.
+- **Modo escuro vira o padrão**: em vez de ativado por escolha (item
+  acima), agora começa ligado pra todo mundo (script no `<head>` evita
+  o flash de tela clara antes do React montar) — quem quiser o tema
+  claro ainda pode trocar no cabeçalho, e a escolha continua salva.
+- **Visual mais próximo do mockup enviado**: badge colorido com ícone
+  por tipo de sala (Recepção, Sala de Reunião, Espaço Natureza, salas
+  pessoais, cada uma com sua cor), paleta escura mais rica nos cards
+  (tom mais profundo, bordas translúcidas em vez de cinza sólido), e
+  botões da barra de chamada com texto (Microfone/Câmera/Compartilhar)
+  no lugar de só ícone.
 
 ## Ainda por fazer
 
 ### Redesenho visual (em andamento, por fases)
 
-- **Visual novo enviado pelo cliente (tema escuro, cards com ícones,
-  fita de participantes)**: pedido explícito de seguir fielmente — a
-  estrutura (mapa único, barra lateral, barra de chamada) já bate com
-  o mockup; falta a parte puramente visual (paleta, tipografia, ícones
-  no padrão do mockup) — ainda não implementada, é a próxima frente.
+- **Piso das salas ainda é ilustração simples em CSS** (assentos +
+  nome + badge), não o visual fotorrealista/isométrico do mockup —
+  isso exigiria assets de ilustração de verdade (contratar arte ou
+  usar uma biblioteca de assets isométricos prontos), não é algo que
+  dá pra gerar só com código.
 - **Central de notificações mais completa e busca global (Ctrl+K)**:
   o sino hoje só cobre menções de chat — uma central de notificações
   de verdade (outros tipos de evento, histórico) e a busca global

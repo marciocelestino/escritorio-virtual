@@ -902,7 +902,7 @@ setCurrentUserId(
             flex-col
             border-l
             bg-white
-            dark:border-slate-700
+            dark:border-white/10
             dark:bg-slate-900
           "
         >
@@ -922,7 +922,7 @@ setCurrentUserId(
 
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t dark:border-slate-700">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto border-t dark:border-white/10">
 
             <button
               onClick={() =>
@@ -941,7 +941,7 @@ setCurrentUserId(
                 font-bold
                 text-slate-900
                 hover:bg-slate-50
-                dark:border-slate-700
+                dark:border-white/10
                 dark:text-slate-100
                 dark:hover:bg-slate-800
               "

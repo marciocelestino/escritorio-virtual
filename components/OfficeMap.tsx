@@ -116,10 +116,10 @@ export default function OfficeMap({
       className="
         rounded-3xl
         border
-        border-stone-700
+        border-slate-700
         bg-gradient-to-b
-        from-stone-800
-        to-stone-900
+        from-slate-900
+        to-slate-950
         p-6
         shadow-inner
       "

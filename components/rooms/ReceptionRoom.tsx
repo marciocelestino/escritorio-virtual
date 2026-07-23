@@ -1,5 +1,9 @@
 import PositionedAvatar from "../PositionedAvatar";
-import { EmptySeatMarker } from "./RoomDecor";
+import {
+  EmptySeatMarker,
+  RoomBadge,
+  ROOM_BADGE_COLORS,
+} from "./RoomDecor";
 
 type User = {
   id: number;
@@ -44,20 +48,29 @@ export default function ReceptionRoom({
         border
         bg-white
         p-4
-        dark:border-slate-700
-        dark:bg-slate-800
+        dark:border-white/10
+        dark:bg-slate-900
       "
     >
       <h3
         className="
           mb-2
+          flex
+          items-center
+          gap-2
           text-sm
           font-semibold
           text-slate-900
           dark:text-slate-100
         "
       >
-        🏢 Recepção
+        <RoomBadge
+          icon="🏢"
+          colorClass={
+            ROOM_BADGE_COLORS.recepcao
+          }
+        />
+        Recepção
       </h3>
 
       {positions.map((pos, seatIndex) => {

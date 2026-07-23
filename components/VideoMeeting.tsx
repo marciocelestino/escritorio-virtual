@@ -1960,8 +1960,8 @@ export default function VideoMeeting({
           bg-white
           p-4
           shadow-xl
-          dark:border-slate-700
-          dark:bg-slate-800
+          dark:border-white/10
+          dark:bg-slate-900
         "
       >
 
@@ -2024,8 +2024,8 @@ export default function VideoMeeting({
           py-3
           shadow-2xl
           backdrop-blur
-          dark:border-slate-700
-          dark:bg-slate-800/95
+          dark:border-white/10
+          dark:bg-slate-900/95
         "
       >
 
@@ -2310,6 +2310,9 @@ export default function VideoMeeting({
                   : "Ligar microfone"
               }
               className={`
+                flex
+                items-center
+                gap-2
                 rounded-lg
                 px-3
                 py-2
@@ -2321,7 +2324,7 @@ export default function VideoMeeting({
                 }
               `}
             >
-              🎙️
+              🎙️ Microfone
             </button>
 
             <button
@@ -2332,6 +2335,9 @@ export default function VideoMeeting({
                   : "Ligar câmera"
               }
               className={`
+                flex
+                items-center
+                gap-2
                 rounded-lg
                 px-3
                 py-2
@@ -2343,7 +2349,7 @@ export default function VideoMeeting({
                 }
               `}
             >
-              📷
+              📷 Câmera
             </button>
 
             <button
@@ -2354,6 +2360,9 @@ export default function VideoMeeting({
                   : "Compartilhar tela"
               }
               className={`
+                flex
+                items-center
+                gap-2
                 rounded-lg
                 px-3
                 py-2
@@ -2365,7 +2374,7 @@ export default function VideoMeeting({
                 }
               `}
             >
-              🖥️
+              🖥️ Compartilhar
             </button>
 
             <button
@@ -2376,6 +2385,9 @@ export default function VideoMeeting({
               }
               title="Escolher dispositivos de áudio"
               className={`
+                flex
+                items-center
+                gap-2
                 rounded-lg
                 px-3
                 py-2

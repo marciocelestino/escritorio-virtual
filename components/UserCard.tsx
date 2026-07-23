@@ -55,7 +55,7 @@ export default function UserCard({
         gap-2
         border-b
         p-4
-        dark:border-slate-700
+        dark:border-white/10
       "
     >
       <div>

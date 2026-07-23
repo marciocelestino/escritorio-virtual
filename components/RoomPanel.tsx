@@ -103,12 +103,12 @@ export default function RoomPanel({
         border
         bg-white
         shadow-sm
-        dark:border-slate-700
-        dark:bg-slate-800
+        dark:border-white/10
+        dark:bg-slate-900
       "
     >
 
-      <div className="flex border-b dark:border-slate-700">
+      <div className="flex border-b dark:border-white/10">
 
         <button
           onClick={() =>
@@ -345,7 +345,7 @@ export default function RoomPanel({
               gap-2
               border-t
               p-2
-              dark:border-slate-700
+              dark:border-white/10
             "
           >
 
@@ -367,8 +367,8 @@ export default function RoomPanel({
                 py-2
                 text-sm
                 text-slate-900
-                dark:border-slate-600
-                dark:bg-slate-900
+                dark:border-slate-700
+                dark:bg-slate-950
                 dark:text-slate-100
               "
             />

@@ -27,6 +27,23 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Aplica a classe "dark" antes da primeira pintura da página —
+            sem isso, toda vez que a página carrega apareceria um flash
+            do tema claro antes do React montar e corrigir pro escuro
+            (que agora é o padrão). */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                if (localStorage.getItem('tema') !== 'claro') {
+                  document.documentElement.classList.add('dark');
+                }
+              } catch (e) {}
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
