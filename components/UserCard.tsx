@@ -36,17 +36,18 @@ export default function UserCard({
         gap-2
         border-b
         p-4
+        dark:border-slate-700
       "
     >
       <div>
-        <div className="font-medium">
+        <div className="font-medium dark:text-slate-100">
           {nome}
         </div>
 
-        <div className="mt-1 text-sm text-slate-500">
+        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
           {getStatusIcon()} {status ?? "Disponível"}
           {room && (
-            <span className="text-slate-400">
+            <span className="text-slate-400 dark:text-slate-500">
               {" "}
               · {room}
             </span>
@@ -68,6 +69,9 @@ export default function UserCard({
             font-medium
             text-slate-600
             hover:bg-slate-200
+            dark:bg-slate-700
+            dark:text-slate-300
+            dark:hover:bg-slate-600
           "
         >
           Chamar aqui

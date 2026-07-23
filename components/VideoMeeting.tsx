@@ -211,6 +211,8 @@ function CameraOffAvatar({
         rounded-xl
         border
         bg-slate-100
+        dark:border-slate-600
+        dark:bg-slate-700
         ${
           small
             ? "h-20 w-20 shrink-0"
@@ -1904,6 +1906,8 @@ export default function VideoMeeting({
           bg-white
           p-4
           shadow-xl
+          dark:border-slate-700
+          dark:bg-slate-800
         "
       >
 
@@ -1913,6 +1917,7 @@ export default function VideoMeeting({
             text-sm
             font-semibold
             text-slate-900
+            dark:text-slate-100
           "
         >
           🎥 {room}
@@ -1920,7 +1925,7 @@ export default function VideoMeeting({
 
         {autoJoin && (
 
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
             🚪 Conectando áudio automaticamente
             (portas abertas)...
           </p>
@@ -1964,6 +1969,8 @@ export default function VideoMeeting({
           py-3
           shadow-2xl
           backdrop-blur
+          dark:border-slate-700
+          dark:bg-slate-800/95
         "
       >
 
@@ -1985,6 +1992,7 @@ export default function VideoMeeting({
                 text-xs
                 font-semibold
                 text-slate-900
+                dark:text-slate-100
               "
             >
               🎥 {room} · {participantCount}
@@ -2001,6 +2009,7 @@ export default function VideoMeeting({
                     text-[11px]
                     text-blue-600
                     hover:underline
+                    dark:text-blue-400
                   "
                 >
                   ↩️ Voltar pra sala da chamada
@@ -2058,6 +2067,7 @@ export default function VideoMeeting({
                   text-center
                   text-[10px]
                   text-slate-500
+                  dark:text-slate-400
                 "
               >
                 Você
@@ -2207,6 +2217,7 @@ export default function VideoMeeting({
                       text-center
                       text-[10px]
                       text-slate-500
+                      dark:text-slate-400
                     "
                   >
                     {remoteUser?.nome ??
@@ -2249,8 +2260,8 @@ export default function VideoMeeting({
                 text-sm
                 ${
                   micOn
-                    ? "bg-slate-200 text-slate-800"
-                    : "bg-red-100 text-red-700"
+                    ? "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
+                    : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
                 }
               `}
             >
@@ -2271,8 +2282,8 @@ export default function VideoMeeting({
                 text-sm
                 ${
                   cameraOn
-                    ? "bg-slate-200 text-slate-800"
-                    : "bg-red-100 text-red-700"
+                    ? "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
+                    : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
                 }
               `}
             >
@@ -2293,8 +2304,8 @@ export default function VideoMeeting({
                 text-sm
                 ${
                   sharingScreen
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-slate-200 text-slate-800"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    : "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
                 }
               `}
             >
@@ -2315,8 +2326,8 @@ export default function VideoMeeting({
                 text-sm
                 ${
                   showDeviceSettings
-                    ? "bg-blue-100 text-blue-700"
-                    : "bg-slate-200 text-slate-800"
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    : "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
                 }
               `}
             >
@@ -2353,6 +2364,7 @@ export default function VideoMeeting({
               gap-4
               border-t
               pt-3
+              dark:border-slate-700
             "
           >
 
@@ -2363,6 +2375,7 @@ export default function VideoMeeting({
                 gap-1
                 text-xs
                 text-slate-500
+                dark:text-slate-400
               "
             >
               🎙️ Microfone
@@ -2383,6 +2396,9 @@ export default function VideoMeeting({
                   py-1
                   text-xs
                   text-slate-700
+                  dark:border-slate-600
+                  dark:bg-slate-900
+                  dark:text-slate-200
                 "
               >
 
@@ -2415,6 +2431,7 @@ export default function VideoMeeting({
                   gap-1
                   text-xs
                   text-slate-500
+                  dark:text-slate-400
                 "
               >
                 🔊 Alto-falante
@@ -2435,6 +2452,9 @@ export default function VideoMeeting({
                     py-1
                     text-xs
                     text-slate-700
+                    dark:border-slate-600
+                    dark:bg-slate-900
+                    dark:text-slate-200
                   "
                 >
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import MeusDados from "@/components/MeusDados";
+import { useDarkMode } from "@/lib/useDarkMode";
 
 export default function Header() {
   const router = useRouter();
@@ -14,6 +15,9 @@ export default function Header() {
 
   const [showMeusDados, setShowMeusDados] =
     useState(false);
+
+  const [darkMode, setDarkMode] =
+    useDarkMode();
 
   const logout = () => {
     localStorage.removeItem("usuario");
@@ -80,6 +84,29 @@ export default function Header() {
           <div className="text-sm text-slate-300">
             {emoji} {status || "Disponível"}
           </div>
+        </button>
+
+        <button
+          onClick={() =>
+            setDarkMode((current) => !current)
+          }
+          title={
+            darkMode
+              ? "Mudar para tema claro"
+              : "Mudar para tema escuro"
+          }
+          className="
+            rounded-lg
+            border
+            border-slate-700
+            px-3
+            py-2
+            text-sm
+            text-slate-300
+            hover:bg-slate-900
+          "
+        >
+          {darkMode ? "☀️" : "🌙"}
         </button>
 
         <button

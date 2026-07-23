@@ -272,6 +272,38 @@ app.prepare().then(() => {
       });
     });
 
+    // Chat de texto por sala — sem histórico persistente (só existe
+    // enquanto a pessoa está com a página aberta) e sem @menção por
+    // enquanto. Manda pra todo mundo e cada cliente filtra pela sala,
+    // igual já acontece com o presence-update.
+    socket.on("chat-message", ({ room, message }) => {
+      const senderId = socketUsers.get(socket.id);
+      const sender = onlineUsers[senderId];
+
+      if (
+        !sender ||
+        typeof message !== "string" ||
+        typeof room !== "string" ||
+        sender.room !== room
+      ) {
+        return;
+      }
+
+      const trimmed = message.trim().slice(0, 500);
+
+      if (!trimmed) {
+        return;
+      }
+
+      io.emit("chat-message", {
+        room,
+        fromId: sender.id,
+        fromNome: sender.nome,
+        message: trimmed,
+        at: Date.now(),
+      });
+    });
+
     // Pede pra um participante da chamada mutar o próprio microfone. Não
     // dá pra silenciar a faixa de áudio de outra pessoa à força (WebRTC
     // não permite isso sem cooperação de quem está enviando) — então isso

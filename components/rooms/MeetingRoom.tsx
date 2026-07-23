@@ -49,6 +49,8 @@ export default function MeetingRoom({
         border
         bg-white
         p-6
+        dark:border-slate-700
+        dark:bg-slate-800
       "
     >
 
@@ -57,6 +59,8 @@ export default function MeetingRoom({
           mb-6
           text-2xl
           font-bold
+          text-slate-900
+          dark:text-slate-100
         "
       >
         👥 Sala de Reunião

@@ -100,6 +100,7 @@ export default function PositionedAvatar({
             rounded-full
             border-2
             border-white
+            dark:border-slate-800
             ${statusColor}
           `}
         />
@@ -111,6 +112,8 @@ export default function PositionedAvatar({
           mt-1
           text-xs
           font-medium
+          text-slate-900
+          dark:text-slate-100
         "
       >
         {isCurrentUser && "👑 "}

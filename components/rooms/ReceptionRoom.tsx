@@ -48,6 +48,8 @@ export default function ReceptionRoom({
         border
         bg-white
         p-6
+        dark:border-slate-700
+        dark:bg-slate-800
       "
     >
       <h3
@@ -55,6 +57,8 @@ export default function ReceptionRoom({
           mb-6
           text-2xl
           font-bold
+          text-slate-900
+          dark:text-slate-100
         "
       >
         🏢 Recepção
@@ -103,6 +107,10 @@ export default function ReceptionRoom({
           px-8
           py-3
           font-semibold
+          text-slate-900
+          dark:border-slate-600
+          dark:bg-slate-700
+          dark:text-slate-100
         "
       >
         Balcão de Recepção

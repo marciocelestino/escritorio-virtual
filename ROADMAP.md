@@ -58,21 +58,31 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   sair) sempre visíveis — troca a pastilha/painel expansível anterior.
   Mutar/remover participante agora aparece ao passar o mouse sobre a
   miniatura da pessoa.
+- **Corrige vídeo remoto congelado/em branco**: câmera desligada (ou
+  nunca ligada, ex.: entrou só com áudio) de um participante agora
+  mostra o avatar dele — antes ficava com o último quadro recebido
+  congelado ou branco, já que só tratávamos isso pra própria câmera.
+- **Painel de Participantes + Chat de texto por sala**: substitui a
+  antiga lista "Nesta sala" — duas abas (Participantes/Chat), com chat
+  em tempo real por sala (sem @menção nem histórico persistente por
+  enquanto — mensagens somem ao recarregar a página; isso fica pra uma
+  segunda leva do chat).
+- **Modo escuro de propósito**: toggle (🌙/☀️) no cabeçalho, salvo em
+  `localStorage`, usando as variantes `dark:` do Tailwind — nunca pela
+  preferência do sistema (é assim que quebrou a legibilidade da vez
+  passada). Cobre a página do escritório e seus componentes (salas,
+  barras laterais, painel de participantes/chat, chamada); as páginas
+  de admin, login e "Meus Dados" ainda não foram cobertas — ver item
+  abaixo.
 
 ## Ainda por fazer
 
 ### Redesenho visual (em andamento, por fases)
 
-- **Modo escuro de propósito**: toggle salvo no perfil/`localStorage`,
-  usando as variantes `dark:` do Tailwind — item grande porque toca
-  praticamente todo componente da interface.
-- **Painel de Participantes + Chat de texto unificado**: juntar a lista
-  "Nesta sala" com um chat de texto por sala (sem @menção/histórico
-  persistente por enquanto — isso fica pra uma segunda leva do chat).
+- **Modo escuro nas páginas restantes**: admin, login/cadastro e o
+  modal "Meus Dados" ainda estão só no tema claro.
 - **Central de notificações e busca global (Ctrl+K)**: recursos novos,
   não existem hoje.
-
-### Controles de chamada
 
 ### Controles de chamada
 
@@ -111,22 +121,17 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   "Gestão" entra na "Sala Gestão"). Depende do item anterior (cargos)
   já existir.
 
-### Chat de texto
+### Chat de texto (segunda leva)
 
-- Conversas privadas e em grupo, com @menção de usuário.
-- Precisa de um modelo de dados novo (mensagens: remetente, sala ou
-  destinatário, texto, hora) e onde guardar isso — pode ser um arquivo
-  JSON simples (como `data/usuarios.json` hoje) ou crescer para algo mais
-  robusto se o volume de mensagens justificar.
+- Já existe um chat básico por sala (ver "Já implementado"). Falta:
+  conversas privadas (1:1) e em grupo, @menção de usuário, e histórico
+  persistente entre sessões.
+- Precisa de um modelo de dados novo pra persistência (mensagens:
+  remetente, sala ou destinatário, texto, hora) e onde guardar isso —
+  pode ser um arquivo JSON simples (como `data/usuarios.json` hoje) ou
+  crescer para algo mais robusto se o volume de mensagens justificar.
 - @menção pode reaproveitar a infraestrutura do "cutucar" (som +
   notificação) para avisar quem foi citado.
-
-### Modo escuro
-
-- Removemos o dark-mode *automático* (que quebrava a legibilidade) — dá
-  pra fazer de propósito agora: um toggle salvo no perfil (ou
-  `localStorage`), usando as variantes `dark:` do Tailwind em vez de
-  depender só da preferência do sistema.
 
 ### Gravação de reuniões
 

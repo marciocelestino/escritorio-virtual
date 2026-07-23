@@ -167,6 +167,10 @@ export function EmptySeatMarker({
         transition
         hover:border-blue-400
         hover:text-blue-400
+        dark:border-slate-600
+        dark:text-slate-600
+        dark:hover:border-blue-400
+        dark:hover:text-blue-400
       "
       style={{
         left: `${x}px`,

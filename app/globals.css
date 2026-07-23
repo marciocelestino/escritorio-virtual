@@ -1,9 +1,21 @@
 @import "tailwindcss";
 
+/* Modo escuro de propósito: só ativa com a classe `dark` na tag <html>
+   (alternada pelo toggle, via lib/useDarkMode.ts), nunca sozinho pela
+   preferência do sistema — foi assim que quebrou a legibilidade da
+   primeira vez (ver comentário mais abaixo). */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
   color-scheme: light;
+}
+
+:root.dark {
+  --background: #0f172a;
+  --foreground: #e2e8f0;
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -14,10 +26,12 @@
 }
 
 /* Esta interface foi desenhada só para tema claro (cards brancos, texto
-   escuro). O bloco @media (prefers-color-scheme: dark) que vinha do
-   create-next-app trocava o texto para quase-branco quando o sistema
-   operacional estava em modo escuro, deixando campos e itens de lista
-   ilegíveis (texto claro sobre fundo claro) — por isso foi removido. */
+   escuro) originalmente. O bloco @media (prefers-color-scheme: dark) que
+   vinha do create-next-app trocava o texto para quase-branco quando o
+   sistema operacional estava em modo escuro, deixando campos e itens de
+   lista ilegíveis (texto claro sobre fundo claro) — por isso foi
+   removido. O modo escuro agora é feito de propósito, componente a
+   componente, com as variantes `dark:` do Tailwind. */
 
 body {
   background: var(--background);

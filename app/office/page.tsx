@@ -8,7 +8,9 @@ import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import UserCard from "@/components/UserCard";
-import RoomPresence from "@/components/RoomPresence";
+import RoomPanel, {
+  type ChatMessage,
+} from "@/components/RoomPanel";
 import RoomPulse from "@/components/RoomPulse";
 import StatusSelector from "@/components/StatusSelector";
 import { getSessionUser, getSessionToken } from "@/lib/session";
@@ -83,6 +85,26 @@ export default function OfficePage() {
     fromNome: string;
     room: string;
   } | null>(null);
+
+  // Chat de texto por sala, sem persistência — as mensagens somem ao
+  // recarregar a página, mas ficam guardadas por sala enquanto a pessoa
+  // navega entre salas na mesma sessão.
+  const [chatMessages, setChatMessages] =
+  useState<
+    Record<string, ChatMessage[]>
+  >({});
+
+  function sendChatMessage(text: string) {
+
+    if (!currentUserId || !text.trim()) {
+      return;
+    }
+
+    getSocket().emit("chat-message", {
+      room: currentRoom,
+      message: text,
+    });
+  }
 
   const [
     usuariosColapsados,
@@ -401,6 +423,26 @@ socket.on(
   }
 );
 
+socket.on(
+  "chat-message",
+  (msg: ChatMessage & { room: string }) => {
+
+    setChatMessages((prev) => ({
+      ...prev,
+      [msg.room]: [
+        ...(prev[msg.room] ?? []),
+        {
+          fromId: msg.fromId,
+          fromNome: msg.fromNome,
+          message: msg.message,
+          at: msg.at,
+        },
+      ].slice(-200),
+    }));
+
+  }
+);
+
 setCurrentUserId(
   user.id
 );
@@ -614,7 +656,7 @@ useEffect(() => {
 
   return (
 
-    <main className="flex h-screen flex-col bg-slate-100">
+    <main className="flex h-screen flex-col bg-slate-100 dark:bg-slate-950">
       {notification && (
         <Notification
           message={notification}
@@ -711,6 +753,7 @@ useEffect(() => {
                   text-4xl
                   font-bold
                   text-slate-900
+                  dark:text-slate-100
                 "
               >
                 Sala Atual
@@ -721,6 +764,7 @@ useEffect(() => {
                   mt-2
                   text-xl
                   text-slate-600
+                  dark:text-slate-400
                 "
               >
                 {currentRoom}
@@ -741,6 +785,7 @@ useEffect(() => {
                   text-sm
                   font-medium
                   text-slate-700
+                  dark:text-slate-300
                 "
               >
                 Meu status
@@ -767,8 +812,8 @@ useEffect(() => {
                   font-medium
                   ${
                     portasAbertas
-                      ? "border-green-300 bg-green-100 text-green-800"
-                      : "border-slate-300 bg-slate-100 text-slate-600"
+                      ? "border-green-300 bg-green-100 text-green-800 dark:border-green-700 dark:bg-green-900/40 dark:text-green-300"
+                      : "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
                   }
                 `}
               >
@@ -789,6 +834,8 @@ useEffect(() => {
               bg-white
               p-6
               shadow-sm
+              dark:border-slate-700
+              dark:bg-slate-900
             "
           >
 
@@ -797,6 +844,7 @@ useEffect(() => {
                 text-3xl
                 font-semibold
                 text-slate-900
+                dark:text-slate-100
               "
             >
               {currentRoom}
@@ -813,6 +861,9 @@ useEffect(() => {
                   border-green-200
                   bg-green-50
                   p-4
+                  dark:border-green-800
+                  dark:bg-green-900/20
+                  dark:text-green-100
                 "
               >
 
@@ -836,6 +887,7 @@ useEffect(() => {
                 mt-4
                 space-y-2
                 text-slate-600
+                dark:text-slate-400
               "
             >
 
@@ -898,6 +950,8 @@ useEffect(() => {
                 bg-white
                 p-5
                 shadow-sm
+                dark:border-slate-700
+                dark:bg-slate-900
               "
             >
 
@@ -905,6 +959,7 @@ useEffect(() => {
                 className="
                   font-semibold
                   text-slate-900
+                  dark:text-slate-100
                 "
               >
                 Evolução Futura
@@ -915,13 +970,14 @@ useEffect(() => {
                   mt-2
                   text-sm
                   text-slate-600
+                  dark:text-slate-400
                 "
               >
                 Ideias para as próximas fases:
                 responsividade para celular,
                 webapp instalável (PWA),
-                chat de texto,
-                modo escuro,
+                chat privado e em grupo com @menção,
+                modo escuro no admin/login/Meus Dados,
                 central de notificações,
                 busca global,
                 gravação de reuniões,
@@ -939,6 +995,8 @@ useEffect(() => {
                 bg-white
                 p-5
                 shadow-sm
+                dark:border-slate-700
+                dark:bg-slate-900
               "
             >
 
@@ -946,6 +1004,7 @@ useEffect(() => {
                 className="
                   font-semibold
                   text-slate-900
+                  dark:text-slate-100
                 "
               >
                 Usuários Online
@@ -956,6 +1015,7 @@ useEffect(() => {
                   mt-2
                   text-sm
                   text-slate-600
+                  dark:text-slate-400
                 "
               >
                 {onlineUsers.length}
@@ -965,9 +1025,14 @@ useEffect(() => {
 
             </div>
 
-            <RoomPresence
+            <RoomPanel
               room={currentRoom}
               users={onlineUsers}
+              currentUserId={currentUserId}
+              messages={
+                chatMessages[currentRoom] ?? []
+              }
+              onSendMessage={sendChatMessage}
             />
 
           </div>
@@ -979,6 +1044,8 @@ useEffect(() => {
             overflow-y-auto
             border-l
             bg-white
+            dark:border-slate-700
+            dark:bg-slate-900
 
             ${
               usuariosColapsados
@@ -1015,6 +1082,8 @@ useEffect(() => {
                   rounded-lg
                   text-slate-400
                   hover:bg-slate-100
+                  dark:text-slate-500
+                  dark:hover:bg-slate-800
                 "
               >
                 ‹
@@ -1055,6 +1124,9 @@ useEffect(() => {
                       font-semibold
                       text-slate-600
                       hover:bg-slate-200
+                      dark:bg-slate-800
+                      dark:text-slate-300
+                      dark:hover:bg-slate-700
                     "
                   >
                     {user.nome
@@ -1071,6 +1143,7 @@ useEffect(() => {
                         rounded-full
                         border
                         border-white
+                        dark:border-slate-900
                         ${statusColor}
                       `}
                     />
@@ -1097,11 +1170,14 @@ useEffect(() => {
                 font-bold
                 text-slate-900
                 hover:bg-slate-50
+                dark:border-slate-700
+                dark:text-slate-100
+                dark:hover:bg-slate-800
               "
             >
               Usuários
 
-              <span className="text-slate-400">
+              <span className="text-slate-400 dark:text-slate-500">
                 ▾
               </span>
             </button>

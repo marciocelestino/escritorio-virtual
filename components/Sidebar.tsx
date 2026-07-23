@@ -89,6 +89,8 @@ export default function Sidebar({
           border-r
           bg-white
           py-4
+          dark:border-slate-700
+          dark:bg-slate-800
         "
       >
         <button
@@ -106,6 +108,8 @@ export default function Sidebar({
             rounded-lg
             text-slate-400
             hover:bg-slate-100
+            dark:text-slate-500
+            dark:hover:bg-slate-700
           "
         >
           ›
@@ -142,8 +146,8 @@ export default function Sidebar({
 
                 ${
                   active
-                    ? "bg-blue-100"
-                    : "hover:bg-slate-100"
+                    ? "bg-blue-100 dark:bg-blue-900/40"
+                    : "hover:bg-slate-100 dark:hover:bg-slate-700"
                 }
               `}
             >
@@ -163,6 +167,7 @@ export default function Sidebar({
                     text-[9px]
                     font-semibold
                     text-white
+                    dark:border-slate-800
                   "
                 >
                   {count}
@@ -181,6 +186,8 @@ export default function Sidebar({
         w-80
         border-r
         bg-white
+        dark:border-slate-700
+        dark:bg-slate-800
       "
     >
       <div
@@ -193,6 +200,8 @@ export default function Sidebar({
           p-4
           font-bold
           text-slate-900
+          dark:border-slate-700
+          dark:text-slate-100
         "
       >
         <button
@@ -202,7 +211,7 @@ export default function Sidebar({
           className="flex items-center gap-2 hover:opacity-70"
         >
           Salas
-          <span className="text-slate-400 font-normal">
+          <span className="text-slate-400 font-normal dark:text-slate-500">
             ‹
           </span>
         </button>
@@ -232,11 +241,12 @@ export default function Sidebar({
               border-b
               p-4
               transition
+              dark:border-slate-700
 
               ${
                 active
-                  ? "bg-blue-100 font-semibold text-blue-700"
-                  : "hover:bg-slate-100"
+                  ? "bg-blue-100 font-semibold text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                  : "hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
               }
             `}
           >
@@ -263,6 +273,8 @@ export default function Sidebar({
                   px-2
                   py-1
                   text-xs
+                  dark:bg-slate-700
+                  dark:text-slate-200
                 "
               >
                 {count}

@@ -49,6 +49,8 @@ export default function NatureRoom({
         border
         bg-green-50
         p-6
+        dark:border-slate-700
+        dark:bg-emerald-950/40
       "
     >
       <h3
@@ -56,6 +58,8 @@ export default function NatureRoom({
           mb-6
           text-2xl
           font-bold
+          text-slate-900
+          dark:text-slate-100
         "
       >
         🌳 Espaço Natureza
