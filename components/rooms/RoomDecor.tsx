@@ -26,6 +26,66 @@ export function RoomBadge({
   );
 }
 
+// Mesmo tamanho/posição do RoomBadge, mas mostrando o avatar de verdade do
+// dono da sala (foto/emoji/iniciais) em vez de um ícone genérico — usado
+// nas salas pessoais ("Espaço Fulano"), onde cada sala já tem um dono
+// certo.
+export function OwnerAvatarBadge({
+  nome,
+  avatarTipo,
+  avatarValor,
+}: {
+  nome: string;
+  avatarTipo?: string | null;
+  avatarValor?: string | null;
+}) {
+
+  const initials =
+    nome
+      .split(" ")
+      .slice(0, 2)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase() || "?";
+
+  return (
+    <span
+      className="
+        flex
+        h-7
+        w-7
+        shrink-0
+        items-center
+        justify-center
+        overflow-hidden
+        rounded-full
+        bg-blue-600
+        text-xs
+        font-bold
+        text-white
+      "
+    >
+
+      {avatarTipo === "foto" && avatarValor ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={avatarValor}
+          alt={nome}
+          className="h-full w-full object-cover"
+        />
+      ) : avatarTipo === "emoji" &&
+        avatarValor ? (
+        <span className="text-sm">
+          {avatarValor}
+        </span>
+      ) : (
+        initials
+      )}
+
+    </span>
+  );
+}
+
 export const ROOM_BADGE_COLORS = {
   recepcao:
     "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300",

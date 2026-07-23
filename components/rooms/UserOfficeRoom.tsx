@@ -1,8 +1,7 @@
 import PositionedAvatar from "../PositionedAvatar";
 import {
   EmptySeatMarker,
-  RoomBadge,
-  ROOM_BADGE_COLORS,
+  OwnerAvatarBadge,
 } from "./RoomDecor";
 
 type User = {
@@ -19,6 +18,9 @@ type Props = {
   room: string;
   users: User[];
   currentUserId: number;
+  ownerNome: string;
+  ownerAvatarTipo?: string | null;
+  ownerAvatarValor?: string | null;
   onUserClick: (
     userId: number,
     userName: string
@@ -30,6 +32,9 @@ export default function UserOfficeRoom({
   room,
   users,
   currentUserId,
+  ownerNome,
+  ownerAvatarTipo,
+  ownerAvatarValor,
   onUserClick,
   onSeatClick,
 }: Props) {
@@ -67,11 +72,10 @@ export default function UserOfficeRoom({
           dark:text-slate-100
         "
       >
-        <RoomBadge
-          icon="💻"
-          colorClass={
-            ROOM_BADGE_COLORS.pessoal
-          }
+        <OwnerAvatarBadge
+          nome={ownerNome}
+          avatarTipo={ownerAvatarTipo}
+          avatarValor={ownerAvatarValor}
         />
         {room}
       </h3>

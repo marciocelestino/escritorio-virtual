@@ -544,6 +544,22 @@ app.prepare().then(() => {
       leaveCurrentCall(socket);
     });
 
+    // Avisa explicitamente quem está na chamada que o compartilhamento de
+    // tela acabou — sem isso, o card da tela compartilhada dependia só do
+    // navegador detectar a falta de vídeo (replaceTrack(null) -> mute),
+    // que não é tão imediato/confiável quanto avisar direto pelo socket.
+    socket.on("screen-share-stopped", () => {
+      const callKey = socketCallRoom.get(socket.id);
+
+      if (!callKey) {
+        return;
+      }
+
+      socket.to(callKey).emit("screen-share-stopped", {
+        socketId: socket.id,
+      });
+    });
+
     socket.on("offer", ({ to, offer }) => {
       io.to(to).emit("offer", { from: socket.id, offer });
     });

@@ -1590,6 +1590,12 @@ export default function VideoMeeting({
     setScreenStream(null);
 
     setSharingScreen(false);
+
+    // Avisa direto pelo socket em vez de confiar só no replaceTrack(null)
+    // virar "mute" do lado de quem recebe — isso não é imediato nem
+    // garantido em todo navegador, e deixava o card da tela compartilhada
+    // "grudado" na tela de quem recebia mesmo depois do fim.
+    getSocket().emit("screen-share-stopped");
   }
 
   function toggleScreenShare() {
@@ -1899,6 +1905,30 @@ export default function VideoMeeting({
     );
 
     socket.on(
+      "screen-share-stopped",
+      ({
+        socketId,
+      }: {
+        socketId: string;
+      }) => {
+
+        setRemoteScreenStreams((prev) => {
+          const next = { ...prev };
+          delete next[socketId];
+          return next;
+        });
+
+        setExpandedId((current) =>
+          current ===
+          `${SCREEN_PREFIX}${socketId}`
+            ? null
+            : current
+        );
+
+      }
+    );
+
+    socket.on(
       "existing-participants",
       async (
         participants: Array<{
@@ -2159,6 +2189,7 @@ export default function VideoMeeting({
       socket.off("muted-by-someone");
       socket.off("kicked-from-meeting");
       socket.off("mic-state-changed");
+      socket.off("screen-share-stopped");
       socket.off(
         "connect",
         handleReconnect
@@ -2675,10 +2706,9 @@ export default function VideoMeeting({
 
           <div
             className="
-              flex
+              grid
               shrink-0
-              flex-wrap
-              items-center
+              grid-cols-3
               gap-2
             "
           >

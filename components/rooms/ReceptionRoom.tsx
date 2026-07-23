@@ -32,18 +32,20 @@ export default function ReceptionRoom({
   onSeatClick,
 }: Props) {
 
+  // 2 fileiras de 5 lugares (10 ao todo), mesma altura da Sala de Reunião.
+  const columns = [20, 120, 220, 320, 420];
+
   const positions = [
-    { x: 20, y: 46 },
-    { x: 120, y: 46 },
-    { x: 220, y: 46 },
-    { x: 320, y: 46 },
+    ...columns.map((x) => ({ x, y: 46 })),
+    ...columns.map((x) => ({ x, y: 160 })),
   ];
 
   return (
     <div
       className="
         relative
-        h-[140px]
+        h-[280px]
+        overflow-x-auto
         rounded-2xl
         border
         bg-white

@@ -147,6 +147,22 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   recebia via). Como não foi possível testar com múltiplos
   navegadores reais neste ambiente, vale uma conferida com 2+ pessoas
   numa chamada de verdade.
+- **Corrige card de tela compartilhada "grudado"**: ao parar de
+  compartilhar, quem recebia via o card continuar aparecendo (o
+  navegador não detectava a falta de vídeo de forma confiável/rápida).
+  Agora quem para de compartilhar avisa direto pelo socket
+  (`screen-share-stopped`), e o card some na hora pra todo mundo.
+- **Barra de chamada mais compacta**: os controles (Microfone, Câmera,
+  Compartilhar, Chat, ⚙️, Sair) viraram uma grade fixa de 2 linhas por
+  3, em vez de uma fileira que quebrava linha sem previsibilidade —
+  sobra mais espaço horizontal pra fita de vídeo, cabendo mais gente
+  antes de precisar rolar.
+- **Avatar do dono em cada "Espaço"**: o ícone genérico de computador
+  💻 nas salas pessoais virou o avatar de verdade (foto/emoji/iniciais)
+  de quem é dono daquela sala.
+- **Recepção e Espaço Natureza maiores**: mesma altura da Sala de
+  Reunião (280px) e 10 assentos (2 fileiras de 5) no lugar dos 4
+  antigos.
 
 ## Ainda por fazer
 

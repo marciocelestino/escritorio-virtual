@@ -62,7 +62,7 @@ export default function OfficeMap({
 
   function renderRoom(roomName: string) {
 
-    const users = roomUsers(roomName);
+    const usersInRoom = roomUsers(roomName);
 
     const seatClick = (seat: number) =>
       onSeatClick(roomName, seat);
@@ -70,7 +70,7 @@ export default function OfficeMap({
     if (roomName === "Recepção") {
       return (
         <ReceptionRoom
-          users={users}
+          users={usersInRoom}
           currentUserId={currentUserId}
           onUserClick={onUserClick}
           onSeatClick={seatClick}
@@ -81,7 +81,7 @@ export default function OfficeMap({
     if (roomName === "Sala de Reunião") {
       return (
         <MeetingRoom
-          users={users}
+          users={usersInRoom}
           currentUserId={currentUserId}
           onUserClick={onUserClick}
           onSeatClick={seatClick}
@@ -92,7 +92,7 @@ export default function OfficeMap({
     if (roomName === "Espaço Natureza") {
       return (
         <NatureRoom
-          users={users}
+          users={usersInRoom}
           currentUserId={currentUserId}
           onUserClick={onUserClick}
           onSeatClick={seatClick}
@@ -100,11 +100,24 @@ export default function OfficeMap({
       );
     }
 
+    // Dono da sala pessoal (mesmo critério do buildRoomList: nome
+    // customizado ou "Espaço {nome}") — usado pra mostrar o avatar dele no
+    // lugar de um ícone genérico, mesmo que ele esteja offline agora.
+    const owner = users.find(
+      (candidate) =>
+        (candidate.salaNome ||
+          `Espaço ${candidate.nome}`) ===
+        roomName
+    );
+
     return (
       <UserOfficeRoom
         room={roomName}
-        users={users}
+        users={usersInRoom}
         currentUserId={currentUserId}
+        ownerNome={owner?.nome ?? roomName}
+        ownerAvatarTipo={owner?.avatarTipo}
+        ownerAvatarValor={owner?.avatarValor}
         onUserClick={onUserClick}
         onSeatClick={seatClick}
       />
@@ -134,7 +147,7 @@ export default function OfficeMap({
         "
       >
 
-        <div className="min-w-[280px]">
+        <div className="min-w-[420px]">
           {renderRoom(commonRooms[0].nome)}
         </div>
 
@@ -142,7 +155,7 @@ export default function OfficeMap({
           {renderRoom(commonRooms[1].nome)}
         </div>
 
-        <div className="min-w-[280px]">
+        <div className="min-w-[420px]">
           {renderRoom(commonRooms[2].nome)}
         </div>
 
