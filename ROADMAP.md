@@ -302,11 +302,30 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   no mapa) — quando ela conectar, aparece uma mensagem no chat direto
   entre os dois avisando quantas vezes foi cutucada enquanto estava
   fora, uma por remetente.
-- **Entra na chamada com câmera e microfone desligados**: antes a
-  câmera ligava sozinha ao entrar (pedindo permissão de vídeo na
-  hora). Agora todo mundo entra com os dois desligados por padrão, e
-  liga manualmente quando quiser — mesmo mecanismo que já existia só
-  pra quem entrava via portas abertas, virou o padrão geral.
+- **Entra na chamada com a câmera desligada**: antes a câmera ligava
+  sozinha ao entrar (pedindo permissão de vídeo na hora). Agora todo
+  mundo entra com ela desligada por padrão e liga manualmente quando
+  quiser — o microfone continua ligando normalmente ao entrar, como
+  sempre foi.
+- **Corrige picture-in-picture com tela preta**: o botão ⧉ abria uma
+  janela de PiP sem altura de verdade (`html`/`body` sem altura
+  definida, então o vídeo com `height: 100%` também ficava 0px) —
+  parecia tela preta mesmo com o vídeo certo por trás. Corrigido com um
+  estilo próprio pra essa janela e reprodução explícita do vídeo.
+- **Headers de segurança**: adiciona Content-Security-Policy,
+  Strict-Transport-Security, X-Frame-Options, X-Content-Type-Options,
+  Referrer-Policy e Permissions-Policy em todas as respostas (antes
+  nenhum desses existia — reprovação nos scanners de segurança
+  externos). CSP liberado especificamente pro que o app usa (WebRTC,
+  Socket.IO, avatares em data:/blob:), sem nonce (o app não carrega
+  script de terceiro).
+- **Tela de login sempre escura**: seguindo o mesmo padrão interno do
+  resto do app, independente do tema escolhido (igual o cabeçalho já
+  fazia).
+- **Corrige menu de menções atrás da barra lateral**: o dropdown do
+  sino de notificações tinha o mesmo z-index da barra lateral direita
+  — como ela vem depois no HTML, ficava por cima. Dropdown subiu de
+  camada.
 
 ## Ainda por fazer
 

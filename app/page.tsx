@@ -84,9 +84,11 @@ export default function LoginPage() {
     );
   };
 
+  // Sempre escuro, de propósito — o mesmo padrão interno usado no resto
+  // do app (independente do tema escolhido, igual o cabeçalho já faz).
   return (
-    <main className="flex min-h-screen items-center justify-center bg-slate-100">
-      <div className="w-[420px] rounded-2xl bg-white p-8 shadow-lg">
+    <main className="flex min-h-screen items-center justify-center bg-slate-950">
+      <div className="w-[420px] rounded-2xl border border-white/10 bg-slate-900 p-8 shadow-lg">
         <div className="mb-6 text-center">
           <Image
             src="/logo.png"
@@ -96,7 +98,7 @@ export default function LoginPage() {
             className="mx-auto mb-4 h-16 w-auto"
           />
 
-          <h1 className="text-2xl font-bold">
+          <h1 className="text-2xl font-bold text-slate-100">
             ENTRE, a Casa é Sua!
           </h1>
         </div>
@@ -113,11 +115,11 @@ export default function LoginPage() {
             w-full
             rounded-lg
             border
-            border-slate-300
-            bg-white
+            border-slate-700
+            bg-slate-950
             p-3
-            text-slate-900
-            placeholder:text-slate-400
+            text-slate-100
+            placeholder:text-slate-500
           "
         />
 
@@ -133,11 +135,11 @@ export default function LoginPage() {
             w-full
             rounded-lg
             border
-            border-slate-300
-            bg-white
+            border-slate-700
+            bg-slate-950
             p-3
-            text-slate-900
-            placeholder:text-slate-400
+            text-slate-100
+            placeholder:text-slate-500
           "
         />
 
@@ -162,7 +164,7 @@ export default function LoginPage() {
               setMostrarEsqueciSenha(true);
               setMensagemRecuperacao("");
             }}
-            className="mt-4 w-full text-center text-sm text-blue-600 hover:underline"
+            className="mt-4 w-full text-center text-sm text-blue-400 hover:underline"
           >
             Esqueci minha senha
           </button>
@@ -171,9 +173,9 @@ export default function LoginPage() {
 
         {mostrarEsqueciSenha && (
 
-          <div className="mt-4 border-t border-slate-200 pt-4">
+          <div className="mt-4 border-t border-white/10 pt-4">
 
-            <p className="mb-2 text-sm text-slate-600">
+            <p className="mb-2 text-sm text-slate-400">
               Informe seu e-mail — se ele estiver
               cadastrado, enviamos uma nova senha
               para você.
@@ -193,11 +195,11 @@ export default function LoginPage() {
                 w-full
                 rounded-lg
                 border
-                border-slate-300
-                bg-white
+                border-slate-700
+                bg-slate-950
                 p-2
-                text-slate-900
-                placeholder:text-slate-400
+                text-slate-100
+                placeholder:text-slate-500
               "
             />
 
@@ -212,11 +214,11 @@ export default function LoginPage() {
                 className="
                   flex-1
                   rounded-lg
-                  bg-slate-800
+                  bg-slate-700
                   p-2
                   text-sm
                   text-white
-                  hover:bg-slate-900
+                  hover:bg-slate-600
                   disabled:opacity-60
                 "
               >
@@ -230,7 +232,7 @@ export default function LoginPage() {
                   setMostrarEsqueciSenha(false);
                   setMensagemRecuperacao("");
                 }}
-                className="rounded-lg bg-slate-100 p-2 text-sm text-slate-700 hover:bg-slate-200"
+                className="rounded-lg bg-slate-800 p-2 text-sm text-slate-200 hover:bg-slate-700"
               >
                 Cancelar
               </button>
@@ -238,7 +240,7 @@ export default function LoginPage() {
             </div>
 
             {mensagemRecuperacao && (
-              <p className="mt-3 text-sm text-green-700">
+              <p className="mt-3 text-sm text-green-400">
                 {mensagemRecuperacao}
               </p>
             )}

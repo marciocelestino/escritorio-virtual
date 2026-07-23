@@ -174,7 +174,7 @@ export default function Header({
                 absolute
                 right-0
                 top-full
-                z-50
+                z-[60]
                 mt-2
                 w-72
                 rounded-xl

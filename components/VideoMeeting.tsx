@@ -382,24 +382,55 @@ function PipButton({
             height: 270,
           });
 
+        // Sem isso, <html>/<body> ficam com altura "auto" (0px de
+        // conteúdo até o vídeo carregar) — o vídeo com height:100%
+        // resolve pra 0px também, e a janela abre com tela preta em vez
+        // do vídeo (mesmo com o srcObject certo).
+        const style =
+          pipWindow.document.createElement(
+            "style"
+          );
+
+        style.textContent = `
+          html, body {
+            margin: 0;
+            height: 100%;
+            background: #000;
+          }
+          video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+          }
+        `;
+
+        pipWindow.document.head.appendChild(
+          style
+        );
+
         const video =
           pipWindow.document.createElement(
             "video"
           );
 
-        video.srcObject = stream;
         video.autoplay = true;
-        video.style.width = "100%";
-        video.style.height = "100%";
-        video.style.objectFit = "contain";
-        video.style.background = "#000";
-
-        pipWindow.document.body.style.margin =
-          "0";
+        video.muted = true;
+        video.playsInline = true;
+        video.srcObject = stream;
 
         pipWindow.document.body.appendChild(
           video
         );
+
+        video
+          .play()
+          .catch((playError) => {
+            console.error(
+              "Erro ao iniciar vídeo no picture-in-picture:",
+              playError
+            );
+          });
 
         return;
 
@@ -1310,19 +1341,12 @@ export default function VideoMeeting({
           audio: true,
         });
 
-      const audioTrack =
-        mediaStream.getAudioTracks()[0];
-
-      if (audioTrack) {
-        audioTrack.enabled = false;
-      }
-
       localStreamRef.current =
         mediaStream;
 
       setStream(mediaStream);
       setCameraOn(false);
-      setMicOn(false);
+      setMicOn(true);
       setAutoJoined(
         Boolean(options.audioOnly)
       );
@@ -1336,14 +1360,9 @@ export default function VideoMeeting({
         { room }
       );
 
-      // Avisa quem já está na chamada que já entro com câmera e
-      // microfone desligados — sem isso, o selo de "mutado" só
-      // apareceria pros outros na primeira vez que eu mesmo
-      // ligasse/desligasse alguma coisa.
-      socket.emit("mic-state", {
-        micOn: false,
-      });
-
+      // Avisa quem já está na chamada que já entro com a câmera
+      // desligada — sem isso, o selo só apareceria pros outros na
+      // primeira vez que eu mesmo ligasse/desligasse ela.
       socket.emit("camera-state", {
         cameraOn: false,
       });
