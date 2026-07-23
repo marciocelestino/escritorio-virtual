@@ -11,6 +11,7 @@ type User = {
   status?: string;
   online?: boolean;
   portasAbertas?: boolean;
+  salaTrancada?: boolean;
   seat?: number | null;
   salaNome?: string | null;
   avatarTipo?: string | null;
@@ -245,6 +246,7 @@ export default function OfficeMap({
         ownerNome={owner?.nome ?? roomName}
         ownerAvatarTipo={owner?.avatarTipo}
         ownerAvatarValor={owner?.avatarValor}
+        locked={owner?.salaTrancada}
         onUserClick={onUserClick}
         onSeatClick={seatClick}
       />

@@ -192,6 +192,20 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   centralizados verticalmente no espaço sobrando.
 - **Avatares dos assentos ~30% menores**: ajuda a deixar os cards de
   sala mais compactos e a rolagem geral do mapa mais curta.
+- **Cards de vídeo da chamada maiores**: preenchem a largura da coluna
+  lateral (em vez de um tamanho fixo pequeno), aproveitando melhor o
+  espaço criado quando a barra virou coluna vertical.
+- **Trancar sala pessoal**: cada usuário pode trancar/destrancar a
+  própria sala ("🔒 Minha sala trancada" no cabeçalho). Trancada, só
+  entra quem o dono chamar ("Chamar aqui") ou aceitar um pedido de
+  entrada — quem tenta entrar sem isso recebe um pedido enviado ao
+  dono (aceitar/recusar), nunca entra direto. A checagem é feita no
+  servidor (`server.js`), não só no cliente. Sala com cadeado 🔒 visível
+  no mapa pra todo mundo.
+- **Bloqueado pra buscadores**: `public/robots.txt` (já existia,
+  `Disallow: /`) reforçado com a meta tag `robots: noindex, nofollow`
+  em todas as páginas — sistema interno, não deve aparecer no Google
+  nem em outros buscadores.
 
 ## Ainda por fazer
 

@@ -105,7 +105,7 @@ function VideoTile({
           large
             ? "w-full"
             : small
-            ? "h-28 w-28 shrink-0"
+            ? "aspect-square w-full shrink-0"
             : "w-full max-w-md"
         }
         rounded-xl
@@ -208,15 +208,17 @@ function CameraOffAvatar({
         }
         ${
           small
-            ? "h-28 w-28 shrink-0"
+            ? "aspect-square w-full shrink-0"
             : "h-40 w-full"
         }
       `}
     >
 
       <div
-        className={`
+        className="
           flex
+          h-16
+          w-16
           items-center
           justify-center
           overflow-hidden
@@ -224,13 +226,9 @@ function CameraOffAvatar({
           bg-blue-600
           font-bold
           text-white
+          text-lg
           shadow-md
-          ${
-            small
-              ? "h-11 w-11 text-sm"
-              : "h-16 w-16 text-lg"
-          }
-        `}
+        "
       >
 
         {avatarTipo === "foto" && avatarValor ? (
@@ -241,11 +239,7 @@ function CameraOffAvatar({
             className="h-full w-full object-cover"
           />
         ) : avatarTipo === "emoji" && avatarValor ? (
-          <span
-            className={
-              small ? "text-lg" : "text-3xl"
-            }
-          >
+          <span className="text-3xl">
             {avatarValor}
           </span>
         ) : (
@@ -2421,7 +2415,7 @@ export default function VideoMeeting({
             "
           >
 
-            <div className="flex flex-col items-center">
+            <div className="flex w-full flex-col items-center">
 
               {cameraOn && stream ? (
 
@@ -2455,7 +2449,7 @@ export default function VideoMeeting({
               <span
                 className="
                   mt-1
-                  max-w-20
+                  max-w-full
                   truncate
                   text-center
                   text-[10px]
@@ -2471,7 +2465,7 @@ export default function VideoMeeting({
 
             {screenStream && (
 
-              <div className="flex flex-col items-center">
+              <div className="flex w-full flex-col items-center">
 
                 <VideoTile
                   stream={screenStream}
@@ -2486,7 +2480,7 @@ export default function VideoMeeting({
                 <span
                   className="
                     mt-1
-                    max-w-20
+                    max-w-full
                     truncate
                     text-center
                     text-[10px]
@@ -2528,6 +2522,7 @@ export default function VideoMeeting({
                     group
                     relative
                     flex
+                    w-full
                     flex-col
                     items-center
                   "
@@ -2641,7 +2636,7 @@ export default function VideoMeeting({
                   <span
                     className="
                       mt-1
-                      max-w-20
+                      max-w-full
                       truncate
                       text-center
                       text-[10px]
@@ -2662,7 +2657,7 @@ export default function VideoMeeting({
 
                   <div
                     key={`screen-${socketId}`}
-                    className="flex flex-col items-center"
+                    className="flex w-full flex-col items-center"
                   >
 
                     <VideoTile
@@ -2678,7 +2673,7 @@ export default function VideoMeeting({
                     <span
                       className="
                         mt-1
-                        max-w-20
+                        max-w-full
                         truncate
                         text-center
                         text-[10px]

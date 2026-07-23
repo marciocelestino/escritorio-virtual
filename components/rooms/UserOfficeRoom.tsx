@@ -21,6 +21,7 @@ type Props = {
   ownerNome: string;
   ownerAvatarTipo?: string | null;
   ownerAvatarValor?: string | null;
+  locked?: boolean;
   onUserClick: (
     userId: number,
     userName: string
@@ -38,6 +39,7 @@ export default function UserOfficeRoom({
   ownerNome,
   ownerAvatarTipo,
   ownerAvatarValor,
+  locked,
   onUserClick,
   onSeatClick,
 }: Props) {
@@ -74,7 +76,17 @@ export default function UserOfficeRoom({
           avatarTipo={ownerAvatarTipo}
           avatarValor={ownerAvatarValor}
         />
-        {room}
+        <span className="truncate">
+          {room}
+        </span>
+        {locked && (
+          <span
+            title="Sala trancada"
+            className="shrink-0"
+          >
+            🔒
+          </span>
+        )}
       </h3>
 
       <div className="flex flex-1 items-center">

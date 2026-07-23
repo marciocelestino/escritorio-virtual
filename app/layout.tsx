@@ -15,6 +15,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Internit Office",
   description: "Escritório virtual da Internit",
+  // Sistema de uso interno da empresa — não deve aparecer em buscadores.
+  // Ver também app/robots.ts, que bloqueia o rastreamento por completo.
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 export default function RootLayout({

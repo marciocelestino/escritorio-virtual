@@ -88,6 +88,12 @@ app.prepare().then(() => {
   const socketUsers = new Map();
   const socketCallRoom = new Map();
 
+  // Sala pessoal trancada: só quem está neste conjunto (por nome de sala)
+  // pode entrar, além do próprio dono. Preenchido quando o dono convida
+  // alguém ("Chamar aqui") ou aceita um pedido de entrada — consumido (uso
+  // único) na primeira troca de sala bem-sucedida pra aquela sala.
+  const allowedGuests = new Map();
+
   function getUserBySocketId(socketId) {
     return Object.values(onlineUsers).find(
       (user) => user.socketId === socketId
@@ -234,6 +240,7 @@ app.prepare().then(() => {
         room: user.room,
         status: user.status,
         portasAbertas: Boolean(user.portasAbertas),
+        salaTrancada: Boolean(user.salaTrancada),
         seat: assignFreeSeat(user.room, user.id),
         socketId: socket.id,
       };
@@ -250,6 +257,26 @@ app.prepare().then(() => {
           userId
         );
         return;
+      }
+
+      // Sala pessoal trancada: só o dono entra livremente. Qualquer outra
+      // pessoa precisa ter sido liberada antes (convite do dono ou pedido
+      // de entrada aceito) — ver `allowedGuests`.
+      const ownerId = getPersonalRoomOwnerId(room);
+
+      if (ownerId && ownerId !== userId) {
+        const owner = onlineUsers[ownerId];
+
+        if (owner && owner.salaTrancada) {
+          const allowed = allowedGuests.get(room);
+
+          if (!allowed || !allowed.has(userId)) {
+            socket.emit("room-change-denied", { room });
+            return;
+          }
+
+          allowed.delete(userId);
+        }
       }
 
       if (onlineUsers[userId]) {
@@ -334,6 +361,100 @@ app.prepare().then(() => {
         io.emit("presence-update", Object.values(onlineUsers));
       }
     });
+
+    // Tranca/destranca a própria sala pessoal — só o dono pode mudar (a
+    // checagem userId === dono da sala não é necessária aqui porque
+    // qualquer usuário só tranca a SUA PRÓPRIA sala pessoal por definição,
+    // já que o campo é sempre onlineUsers[userId], nunca o de outra
+    // pessoa).
+    socket.on("sala-lock-change", ({ userId, trancada }) => {
+      if (socketUsers.get(socket.id) !== userId) {
+        console.warn(
+          "Mudança de trava de sala rejeitada: socket não corresponde ao usuário",
+          userId
+        );
+        return;
+      }
+
+      if (onlineUsers[userId]) {
+        onlineUsers[userId].salaTrancada = Boolean(trancada);
+
+        io.emit("presence-update", Object.values(onlineUsers));
+      }
+    });
+
+    // Pede pra entrar numa sala pessoal trancada — avisa o dono, que aceita
+    // ou recusa. Só funciona se a sala tiver um dono conectado; sem isso
+    // (dono offline) já responde negado na hora.
+    socket.on("request-room-entry", ({ room, seat }) => {
+      const senderId = socketUsers.get(socket.id);
+      const sender = onlineUsers[senderId];
+
+      if (!sender || typeof room !== "string") {
+        return;
+      }
+
+      const ownerId = getPersonalRoomOwnerId(room);
+
+      if (!ownerId || ownerId === senderId) {
+        return;
+      }
+
+      const owner = onlineUsers[ownerId];
+
+      if (!owner) {
+        socket.emit("room-entry-response", {
+          room,
+          approved: false,
+          reason: "offline",
+        });
+        return;
+      }
+
+      io.to(owner.socketId).emit("room-entry-requested", {
+        requesterId: sender.id,
+        requesterNome: sender.nome,
+        room,
+        seat: typeof seat === "number" ? seat : null,
+      });
+    });
+
+    // Resposta do dono a um pedido de entrada — só o dono da sala em
+    // questão pode responder por ela.
+    socket.on(
+      "respond-room-entry",
+      ({ requesterId, room, approve }) => {
+        const senderId = socketUsers.get(socket.id);
+
+        const ownerId = getPersonalRoomOwnerId(room);
+
+        if (!ownerId || ownerId !== senderId) {
+          return;
+        }
+
+        const requester = onlineUsers[requesterId];
+
+        if (!requester) {
+          return;
+        }
+
+        if (approve) {
+          const allowed =
+            allowedGuests.get(room) ?? new Set();
+
+          allowed.add(requesterId);
+          allowedGuests.set(room, allowed);
+        }
+
+        io.to(requester.socketId).emit(
+          "room-entry-response",
+          {
+            room,
+            approved: Boolean(approve),
+          }
+        );
+      }
+    );
 
     // "Cutucar": avisa um usuário específico, esteja ele em qual sala
     // estiver, com um som e uma notificação — o nome de quem chamou vem
@@ -481,7 +602,11 @@ app.prepare().then(() => {
     });
 
     // Convida um usuário (esteja ele em qual sala estiver) pra vir até a
-    // sala de quem está convidando.
+    // sala de quem está convidando. Se for a própria sala pessoal de quem
+    // convida e ela estiver trancada, o convite já libera a entrada
+    // (equivalente a "eu chamar" no controle de acesso) — só funciona
+    // assim quando quem convida É o dono da sala, senão um convidado
+    // qualquer poderia usar o convite pra driblar a trava de outra pessoa.
     socket.on("invite-to-room", ({ to, room }) => {
       const senderId = socketUsers.get(socket.id);
       const sender = onlineUsers[senderId];
@@ -489,6 +614,16 @@ app.prepare().then(() => {
 
       if (!sender || !target || !room) {
         return;
+      }
+
+      const ownerId = getPersonalRoomOwnerId(room);
+
+      if (ownerId && ownerId === senderId) {
+        const allowed =
+          allowedGuests.get(room) ?? new Set();
+
+        allowed.add(to);
+        allowedGuests.set(room, allowed);
       }
 
       io.to(target.socketId).emit("invited-to-room", {

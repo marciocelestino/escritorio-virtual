@@ -35,6 +35,7 @@ type UserItem = {
   online?: boolean;
   room: string;
   portasAbertas?: boolean;
+  salaTrancada?: boolean;
   seat?: number | null;
   salaNome?: string | null;
   avatarTipo?: string | null;
@@ -46,7 +47,15 @@ type LivePresence = {
   room: string;
   status?: StatusValue;
   portasAbertas?: boolean;
+  salaTrancada?: boolean;
   seat?: number | null;
+};
+
+type EntryRequest = {
+  requesterId: number;
+  requesterNome: string;
+  room: string;
+  seat: number | null;
 };
 
 function escapeRegExp(text: string) {
@@ -94,6 +103,23 @@ export default function OfficePage() {
 
   const [portasAbertas, setPortasAbertas] =
   useState(false);
+
+  // Tranca a própria sala pessoal: só o dono pode entrar livremente
+  // quando ligada — qualquer outra pessoa precisa ser convidada ou pedir
+  // entrada e ser aceita.
+  const [salaTrancada, setSalaTrancada] =
+  useState(false);
+
+  const [entryRequest, setEntryRequest] =
+  useState<EntryRequest | null>(null);
+
+  // Guarda o pedido de entrada que EU fiz, pra completar a troca de sala
+  // (moveToRoom + chooseSeat) só depois que o dono aceitar — não precisa
+  // ser state porque não afeta o que é renderizado.
+  const pendingEntryRef = useRef<{
+    room: string;
+    seat: number;
+  } | null>(null);
 
   // Sala da chamada de vídeo atual — fica fixa a partir do momento em que
   // entra numa chamada, mesmo que a pessoa navegue pra outra sala (o dock
@@ -215,6 +241,7 @@ export default function OfficePage() {
     room: "Recepção",
     status: "Disponivel" as StatusValue,
     portasAbertas: false,
+    salaTrancada: false,
   });
 
 function moveToRoom(
@@ -303,22 +330,6 @@ function chooseSeat(seat: number) {
   });
 }
 
-// Como o mapa mostra todas as salas ao mesmo tempo, clicar num lugar
-// vazio de uma sala em que a pessoa ainda não está precisa fazer as duas
-// coisas: mudar de sala e já sentar no lugar clicado (não só sentar em
-// qualquer lugar livre, que é o que aconteceria só com moveToRoom).
-function handleSeatClick(
-  room: string,
-  seat: number
-) {
-
-  if (room !== currentRoom) {
-    moveToRoom(room);
-  }
-
-  chooseSeat(seat);
-}
-
 function showNotification(
   message: string
 ) {
@@ -355,6 +366,7 @@ function showNotification(
         room: live.room,
         status: live.status,
         portasAbertas: live.portasAbertas,
+        salaTrancada: live.salaTrancada,
         seat: live.seat,
         online: true,
       };
@@ -366,6 +378,55 @@ function showNotification(
     (user) => user.online !== false
   );
 }, [allUsers]);
+
+// Como o mapa mostra todas as salas ao mesmo tempo, clicar num lugar
+// vazio de uma sala em que a pessoa ainda não está precisa fazer as duas
+// coisas: mudar de sala e já sentar no lugar clicado (não só sentar em
+// qualquer lugar livre, que é o que aconteceria só com moveToRoom).
+function handleSeatClick(
+  room: string,
+  seat: number
+) {
+
+  if (room !== currentRoom) {
+
+    const owner = allUsers.find(
+      (candidate) =>
+        (candidate.salaNome ||
+          `Espaço ${candidate.nome}`) ===
+        room
+    );
+
+    const isLocked = Boolean(
+      owner &&
+        owner.id !== currentUserId &&
+        owner.salaTrancada
+    );
+
+    if (isLocked && owner) {
+
+      pendingEntryRef.current = {
+        room,
+        seat,
+      };
+
+      getSocket().emit(
+        "request-room-entry",
+        { room, seat }
+      );
+
+      showNotification(
+        `🔒 Pedido de entrada enviado a ${owner.nome}. Aguarde a aprovação.`
+      );
+
+      return;
+    }
+
+    moveToRoom(room);
+  }
+
+  chooseSeat(seat);
+}
 
   useEffect(() => {
 
@@ -416,10 +477,15 @@ fetch("/api/users")
     localStorage.getItem("portasAbertas") ===
     "true";
 
+  const initialSalaTrancada =
+    localStorage.getItem("salaTrancada") ===
+    "true";
+
   presenceRef.current = {
     room: currentRoom,
     status: initialStatus,
     portasAbertas: initialPortasAbertas,
+    salaTrancada: initialSalaTrancada,
   };
 
   function announcePresence() {
@@ -434,6 +500,9 @@ fetch("/api/users")
         portasAbertas:
           presenceRef.current
             .portasAbertas,
+        salaTrancada:
+          presenceRef.current
+            .salaTrancada,
         token: getSessionToken(),
       }
     );
@@ -468,6 +537,7 @@ socket.on(
     room: string;
     status?: LivePresence["status"];
     portasAbertas?: boolean;
+    salaTrancada?: boolean;
     seat?: number | null;
   }>) => {
 
@@ -481,11 +551,77 @@ socket.on(
         room: liveUser.room,
         status: liveUser.status,
         portasAbertas: liveUser.portasAbertas,
+        salaTrancada: liveUser.salaTrancada,
         seat: liveUser.seat,
       };
     });
 
     setLiveUsers(map);
+
+  }
+);
+
+socket.on(
+  "room-change-denied",
+  ({ room }: { room: string }) => {
+
+    showNotification(
+      `🔒 Você não tem permissão pra entrar em ${room} agora.`
+    );
+
+  }
+);
+
+socket.on(
+  "room-entry-requested",
+  (payload: EntryRequest) => {
+
+    playPingSound();
+
+    setEntryRequest(payload);
+
+  }
+);
+
+socket.on(
+  "room-entry-response",
+  ({
+    room,
+    approved,
+    reason,
+  }: {
+    room: string;
+    approved: boolean;
+    reason?: string;
+  }) => {
+
+    const pending =
+      pendingEntryRef.current;
+
+    if (!pending || pending.room !== room) {
+      return;
+    }
+
+    pendingEntryRef.current = null;
+
+    if (approved) {
+
+      moveToRoom(room);
+      chooseSeat(pending.seat);
+
+      showNotification(
+        `✅ Pedido aceito — você entrou em ${room}.`
+      );
+
+    } else {
+
+      showNotification(
+        reason === "offline"
+          ? `🔒 O dono de ${room} está offline no momento.`
+          : `🔒 Seu pedido de entrada em ${room} foi recusado.`
+      );
+
+    }
 
   }
 );
@@ -596,6 +732,7 @@ setCurrentUserId(
 
   setStatus(initialStatus);
   setPortasAbertas(initialPortasAbertas);
+  setSalaTrancada(initialSalaTrancada);
 
   // Conecta o socket uma única vez, no valor de currentRoom no momento da
   // montagem — incluir currentRoom nas deps re-registraria os listeners do
@@ -609,9 +746,15 @@ setCurrentUserId(
       room: currentRoom,
       status,
       portasAbertas,
+      salaTrancada,
     };
 
-  }, [currentRoom, status, portasAbertas]);
+  }, [
+    currentRoom,
+    status,
+    portasAbertas,
+    salaTrancada,
+  ]);
 
   useEffect(() => {
 
@@ -666,6 +809,33 @@ setCurrentUserId(
     );
 
   }, [portasAbertas, currentUserId, mounted]);
+
+  useEffect(() => {
+
+    if (!mounted) return;
+
+    localStorage.setItem(
+      "salaTrancada",
+      String(salaTrancada)
+    );
+
+  }, [salaTrancada, mounted]);
+
+  useEffect(() => {
+
+    if (!mounted || !currentUserId) return;
+
+    const socket = getSocket();
+
+    socket.emit(
+      "sala-lock-change",
+      {
+        userId: currentUserId,
+        trancada: salaTrancada,
+      }
+    );
+
+  }, [salaTrancada, currentUserId, mounted]);
 
   // O status só muda quando a própria pessoa escolhe no seletor — já
   // tivemos um comportamento automático aqui (mudar pra "Disponível" ao
@@ -772,6 +942,78 @@ setCurrentUserId(
               className="rounded-lg bg-indigo-500 px-3 py-1 text-sm hover:bg-indigo-400"
             >
               Ignorar
+            </button>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {entryRequest && (
+
+        <div
+          className="
+            fixed
+            top-24
+            right-5
+            z-[60]
+            rounded-xl
+            bg-amber-600
+            px-5
+            py-4
+            text-white
+            shadow-xl
+          "
+        >
+
+          <p>
+            🔒 {entryRequest.requesterNome}
+            {" "}quer entrar na sua sala.
+          </p>
+
+          <div className="mt-3 flex gap-2">
+
+            <button
+              onClick={() => {
+
+                getSocket().emit(
+                  "respond-room-entry",
+                  {
+                    requesterId:
+                      entryRequest.requesterId,
+                    room: entryRequest.room,
+                    approve: true,
+                  }
+                );
+
+                setEntryRequest(null);
+
+              }}
+              className="rounded-lg bg-white px-3 py-1 text-sm font-medium text-amber-700 hover:bg-amber-50"
+            >
+              Aceitar
+            </button>
+
+            <button
+              onClick={() => {
+
+                getSocket().emit(
+                  "respond-room-entry",
+                  {
+                    requesterId:
+                      entryRequest.requesterId,
+                    room: entryRequest.room,
+                    approve: false,
+                  }
+                );
+
+                setEntryRequest(null);
+
+              }}
+              className="rounded-lg bg-amber-500 px-3 py-1 text-sm hover:bg-amber-400"
+            >
+              Recusar
             </button>
 
           </div>
@@ -894,6 +1136,32 @@ setCurrentUserId(
                 {portasAbertas
                   ? "🚪 Portas abertas"
                   : "🚪 Portas fechadas"}
+              </button>
+
+              <button
+                onClick={() =>
+                  setSalaTrancada(
+                    (prev) => !prev
+                  )
+                }
+                title="Quando trancada, só entra na sua sala pessoal quem você chamar ou aceitar um pedido de entrada."
+                className={`
+                  rounded-lg
+                  border
+                  px-3
+                  py-2
+                  text-sm
+                  font-medium
+                  ${
+                    salaTrancada
+                      ? "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                      : "border-slate-300 bg-slate-100 text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                  }
+                `}
+              >
+                {salaTrancada
+                  ? "🔒 Minha sala trancada"
+                  : "🔓 Minha sala destrancada"}
               </button>
 
               <button
