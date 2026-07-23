@@ -247,6 +247,15 @@ app.prepare().then(() => {
     return `room:${room}`;
   }
 
+  // Chat geral da empresa — uma única conversa fixa, independente de
+  // sala, visível/acessível pra todo mundo.
+  const GENERAL_CHAT_KEY = "geral";
+
+  // Só esse usuário (por nome) pode limpar o chat geral, a pedido
+  // explícito — não é um cargo (isAdmin), é uma pessoa específica.
+  const GENERAL_CHAT_CLEAR_ALLOWED_NAME =
+    "Marcio Celestino";
+
   // Chave sempre igual pro mesmo par de pessoas, não importa quem manda
   // pra quem (ordena os dois ids).
   function dmConversationKey(userIdA, userIdB) {
@@ -784,6 +793,98 @@ app.prepare().then(() => {
       );
 
       io.emit("chat-cleared", { room });
+    });
+
+    // Chat geral — mensagem vai pra todo mundo conectado, sem depender
+    // de sala. O texto guardado já vem no formato "markdown-lite" do
+    // pequeno editor do cliente (**negrito**, __sublinhado__,
+    // [texto](url)) — nunca HTML de verdade, então não tem risco de
+    // injeção: quem renderiza faz isso interpretando esses marcadores
+    // como texto simples, nunca como HTML cru.
+    socket.on(
+      "general-chat-message",
+      ({ message }) => {
+
+        const senderId = socketUsers.get(
+          socket.id
+        );
+
+        const sender = onlineUsers[senderId];
+
+        if (
+          !sender ||
+          typeof message !== "string"
+        ) {
+          return;
+        }
+
+        const trimmed = message
+          .trim()
+          .slice(0, 1000);
+
+        if (!trimmed) {
+          return;
+        }
+
+        const record = addMessage({
+          id: `${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}`,
+          conversationKey: GENERAL_CHAT_KEY,
+          kind: "geral",
+          room: null,
+          toUserId: null,
+          fromId: sender.id,
+          fromNome: sender.nome,
+          message: trimmed,
+          at: Date.now(),
+        });
+
+        io.emit("general-chat-message", record);
+
+      }
+    );
+
+    socket.on("load-general-chat-history", () => {
+
+      socket.emit("general-chat-history", {
+        messages: getConversationMessages(
+          GENERAL_CHAT_KEY,
+          200
+        ),
+      });
+
+    });
+
+    // Só a pessoa configurada em GENERAL_CHAT_CLEAR_ALLOWED_NAME pode
+    // zerar o chat geral — checado pelo nome cadastrado, não por ser
+    // admin.
+    socket.on("clear-general-chat", () => {
+
+      const senderId = socketUsers.get(
+        socket.id
+      );
+
+      const sender = onlineUsers[senderId];
+
+      if (!sender) {
+        return;
+      }
+
+      if (
+        sender.nome !==
+        GENERAL_CHAT_CLEAR_ALLOWED_NAME
+      ) {
+        socket.emit("chat-clear-denied");
+        return;
+      }
+
+      clearConversationMessages(
+        GENERAL_CHAT_KEY
+      );
+
+      io.emit("general-chat-cleared");
+
     });
 
     // Manda o histórico persistido de uma conversa — de sala (`room`) ou

@@ -326,6 +326,16 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   sino de notificações tinha o mesmo z-index da barra lateral direita
   — como ela vem depois no HTML, ficava por cima. Dropdown subiu de
   camada.
+- **Chat Geral**: um chat só, visível pra empresa inteira, independente
+  de sala — ícone 💬 próprio no cabeçalho (azul do logo, redondo, um
+  pouco maior que os outros ícones), ao lado do botão de Administração.
+  Tem histórico persistente (mesma infraestrutura do chat de
+  sala/DM) e um editorzinho pequeno com negrito, sublinhado e link.
+  Só o usuário "Marcio Celestino" pode limpar o histórico — checado
+  pelo nome no servidor, não por ser admin. A formatação usa uma
+  marcação própria e simples (`**negrito**`, `__sublinhado__`,
+  `[texto](link)`) interpretada direto em elementos React — nunca HTML
+  cru — então não tem risco de injeção de script por aí.
 
 ## Ainda por fazer
 

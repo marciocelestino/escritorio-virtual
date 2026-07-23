@@ -6,7 +6,15 @@ import { useRouter } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import MeusDados from "@/components/MeusDados";
 import AdminPanel from "@/components/AdminPanel";
+import GeneralChatModal from "@/components/GeneralChatModal";
 import { useDarkMode } from "@/lib/useDarkMode";
+
+// Só essa pessoa pode limpar o Chat Geral — a mesma regra que o servidor
+// confere de novo antes de aceitar (ver server.js,
+// GENERAL_CHAT_CLEAR_ALLOWED_NAME). Isso aqui só controla se o botão de
+// limpar aparece; quem decide de verdade é o servidor.
+const GENERAL_CHAT_CLEAR_ALLOWED_NAME =
+  "Marcio Celestino";
 
 export type Mention = {
   id: string;
@@ -38,6 +46,11 @@ export default function Header({
   // vídeo em andamento (a página /office inteira desmontava).
   const [showAdminPanel, setShowAdminPanel] =
     useState(false);
+
+  const [
+    showGeneralChat,
+    setShowGeneralChat,
+  ] = useState(false);
 
   const [showMentions, setShowMentions] =
     useState(false);
@@ -100,6 +113,30 @@ export default function Header({
       </div>
 
       <div className="flex items-center gap-6">
+        <button
+          onClick={() =>
+            setShowGeneralChat(true)
+          }
+          title="Chat Geral"
+          aria-label="Chat Geral"
+          className="
+            flex
+            h-10
+            w-10
+            items-center
+            justify-center
+            rounded-full
+            bg-[#007CB2]
+            text-lg
+            text-white
+            shadow-md
+            transition
+            hover:brightness-110
+          "
+        >
+          💬
+        </button>
+
         {user?.isAdmin && (
           <button
             onClick={() =>
@@ -321,6 +358,19 @@ export default function Header({
         <MeusDados
           onClose={() =>
             setShowMeusDados(false)
+          }
+        />
+      )}
+
+      {showGeneralChat && user && (
+        <GeneralChatModal
+          currentUserId={user.id}
+          canClear={
+            user.nome ===
+            GENERAL_CHAT_CLEAR_ALLOWED_NAME
+          }
+          onClose={() =>
+            setShowGeneralChat(false)
           }
         />
       )}
