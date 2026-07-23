@@ -81,19 +81,17 @@ export default function UserCard({
           className="
             shrink-0
             rounded-lg
-            bg-slate-100
+            bg-[#007CB2]
             px-2
             py-1
             text-xs
             font-medium
-            text-slate-600
-            hover:bg-slate-200
-            dark:bg-slate-700
-            dark:text-slate-300
-            dark:hover:bg-slate-600
+            text-[#C32E4E]
+            transition
+            hover:brightness-110
           "
         >
-          Chamar aqui
+          Chamar
         </button>
       )}
     </div>

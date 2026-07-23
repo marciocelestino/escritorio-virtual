@@ -206,6 +206,21 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   `Disallow: /`) reforçado com a meta tag `robots: noindex, nofollow`
   em todas as páginas — sistema interno, não deve aparecer no Google
   nem em outros buscadores.
+- **Cores da marca em botões e avisos**: botão "Chamar" (antes "Chamar
+  aqui"), botão "Enviar" do chat e o aviso de notificação (cutucar,
+  convites, avisos gerais) usam o azul e o vermelho/rosa do logo da
+  Internit (`#007CB2` e `#C32E4E`, extraídos do próprio logo). O aviso
+  de notificação também passou a aparecer centralizado no topo, entre
+  o logo e os ícones de admin/notificação (já durava 3 segundos).
+- **Atualização automática após deploy**: o servidor agora se
+  identifica com um id único a cada vez que sobe (cada deploy no
+  Railway derruba e sobe o processo de novo). Se o navegador de alguém
+  reconectar num id diferente do que já tinha visto, a página recarrega
+  sozinha — sem isso, quem já estava com a aba aberta continuava
+  rodando a versão antiga até lembrar de dar F5.
+- **Avatares dos assentos um pouco maiores**: a redução de 30% (item
+  acima) tinha ficado grande demais — ajustado pra um meio-termo entre
+  o tamanho original e o reduzido.
 
 ## Ainda por fazer
 

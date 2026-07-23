@@ -10,13 +10,14 @@ export default function Notification({
       className="
         fixed
         top-5
-        right-5
+        left-1/2
         z-[60]
+        -translate-x-1/2
         rounded-xl
-        bg-blue-600
+        bg-[#007CB2]
         px-5
         py-3
-        text-white
+        text-[#C32E4E]
         shadow-xl
         animate-pulse
       "

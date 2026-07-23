@@ -121,6 +121,14 @@ export default function OfficePage() {
     seat: number;
   } | null>(null);
 
+  // Identifica qual "execução" do servidor respondeu por último — se
+  // mudar (o servidor reiniciou, ex.: novo deploy), recarrega a página
+  // sozinho pra pegar a versão nova, em vez de deixar a pessoa rodando o
+  // código antigo até ela mesma lembrar de dar F5.
+  const serverBootIdRef = useRef<
+    string | null
+  >(null);
+
   // Sala da chamada de vídeo atual — fica fixa a partir do momento em que
   // entra numa chamada, mesmo que a pessoa navegue pra outra sala (o dock
   // flutuante continua mostrando essa chamada até ela sair de verdade).
@@ -508,6 +516,37 @@ fetch("/api/users")
     );
 
   }
+
+socket.on(
+  "server-info",
+  ({
+    bootId,
+  }: {
+    bootId: string;
+  }) => {
+
+    const previous =
+      serverBootIdRef.current;
+
+    serverBootIdRef.current = bootId;
+
+    // Só recarrega se JÁ tínhamos visto um bootId antes e ele mudou —
+    // na primeira conexão (previous === null) não há nada pra
+    // atualizar, é só o carregamento normal da página.
+    if (previous && previous !== bootId) {
+
+      showNotification(
+        "🔄 Nova versão disponível — atualizando..."
+      );
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+
+    }
+
+  }
+);
 
 socket.on(
   "connect",

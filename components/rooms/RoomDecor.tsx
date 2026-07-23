@@ -113,15 +113,15 @@ export function EmptySeatMarker({
       className="
         mx-auto
         flex
-        h-8
-        w-8
+        h-10
+        w-10
         items-center
         justify-center
         rounded-full
         border-2
         border-dashed
         border-slate-300
-        text-sm
+        text-base
         text-slate-300
         transition
         hover:border-blue-400

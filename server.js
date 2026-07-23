@@ -21,6 +21,16 @@ const dev = process.env.NODE_ENV !== "production";
 const hostname = "0.0.0.0";
 const port = process.env.PORT || 3000;
 
+// Identifica esta "execução" do servidor — muda toda vez que o processo
+// sobe (ex.: um novo deploy no Railway substitui o processo antigo pelo
+// novo). O cliente usa isso pra saber que reconectou num servidor
+// DIFERENTE do que estava antes (não só uma queda de rede passageira) e
+// recarregar a página sozinho, pegando a versão nova sem precisar pedir
+// pra cada pessoa apertar Ctrl+F5.
+const SERVER_BOOT_ID = `${Date.now()}-${Math.random()
+  .toString(36)
+  .slice(2)}`;
+
 const SESSION_SECRET =
   process.env.SESSION_SECRET ||
   "dev-only-insecure-secret-change-me";
@@ -223,6 +233,11 @@ app.prepare().then(() => {
   }
 
   io.on("connection", (socket) => {
+
+    socket.emit("server-info", {
+      bootId: SERVER_BOOT_ID,
+    });
+
     socket.on("user-connected", (user) => {
       if (!verifySessionToken(user.token, user.id)) {
         console.warn(
