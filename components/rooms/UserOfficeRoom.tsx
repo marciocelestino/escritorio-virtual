@@ -45,6 +45,9 @@ export default function UserOfficeRoom({
   return (
     <div
       className="
+        flex
+        h-full
+        flex-col
         rounded-2xl
         border
         bg-white
@@ -74,9 +77,11 @@ export default function UserOfficeRoom({
         {room}
       </h3>
 
+      <div className="flex flex-1 items-center">
       <div
         className="
           grid
+          w-full
           grid-cols-3
           gap-x-2
           gap-y-4
@@ -130,6 +135,7 @@ export default function UserOfficeRoom({
           }
         )}
 
+      </div>
       </div>
 
     </div>

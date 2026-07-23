@@ -51,20 +51,20 @@ export default function PositionedAvatar({
         <div
           className={`
             flex
-            h-12
-            w-12
+            h-8
+            w-8
             items-center
             justify-center
             overflow-hidden
             rounded-full
-            text-sm
+            text-xs
             font-bold
             text-white
             shadow-md
 
             ${
               isCurrentUser
-                ? "bg-indigo-600 ring-4 ring-indigo-300"
+                ? "bg-indigo-600 ring-2 ring-indigo-300"
                 : "bg-blue-600"
             }
           `}
@@ -79,7 +79,7 @@ export default function PositionedAvatar({
             />
           ) : avatarTipo === "emoji" &&
             avatarValor ? (
-            <span className="text-xl">
+            <span className="text-sm">
               {avatarValor}
             </span>
           ) : (
@@ -90,10 +90,10 @@ export default function PositionedAvatar({
         <div
           className={`
             absolute
-            -bottom-1
-            -right-1
-            h-4
-            w-4
+            -bottom-0.5
+            -right-0.5
+            h-2.5
+            w-2.5
             rounded-full
             border-2
             border-white
@@ -107,7 +107,10 @@ export default function PositionedAvatar({
       <span
         className="
           mt-1
-          text-xs
+          max-w-[64px]
+          truncate
+          text-center
+          text-[10px]
           font-medium
           text-slate-900
           dark:text-slate-100

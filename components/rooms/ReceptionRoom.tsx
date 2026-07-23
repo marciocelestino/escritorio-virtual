@@ -38,6 +38,9 @@ export default function ReceptionRoom({
   return (
     <div
       className="
+        flex
+        h-full
+        flex-col
         rounded-2xl
         border
         bg-white
@@ -67,9 +70,11 @@ export default function ReceptionRoom({
         Recepção
       </h3>
 
+      <div className="flex flex-1 items-center">
       <div
         className="
           grid
+          w-full
           grid-cols-5
           gap-x-2
           gap-y-4
@@ -123,6 +128,7 @@ export default function ReceptionRoom({
           }
         )}
 
+      </div>
       </div>
 
     </div>

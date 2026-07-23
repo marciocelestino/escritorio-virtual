@@ -793,6 +793,41 @@ setCurrentUserId(
 
       <div className="flex flex-1 overflow-hidden">
 
+        {showVideoDock && (
+
+          <VideoMeeting
+            room={videoRoom}
+            autoJoin={autoJoinCall}
+            onNotify={showNotification}
+            onJoined={() =>
+              setCallRoom(currentRoom)
+            }
+            onLeft={() =>
+              setCallRoom(null)
+            }
+            myNome={myself?.nome}
+            myAvatarTipo={myself?.avatarTipo}
+            myAvatarValor={myself?.avatarValor}
+            roster={allUsers}
+            viewingDifferentRoom={
+              viewingDifferentRoom
+            }
+            onGoToCallRoom={() => {
+              if (callRoom) {
+                moveToRoom(callRoom);
+              }
+            }}
+            sidebarWidthPx={
+              barraLateralFechada ? 0 : 320
+            }
+            onOpenChat={() => {
+              setBarraLateralFechada(false);
+              setChatMinimizado(false);
+            }}
+          />
+
+        )}
+
         <section
           className="
             flex-1
@@ -1047,41 +1082,6 @@ setCurrentUserId(
         </aside>
 
       </div>
-
-      {showVideoDock && (
-
-        <VideoMeeting
-          room={videoRoom}
-          autoJoin={autoJoinCall}
-          onNotify={showNotification}
-          onJoined={() =>
-            setCallRoom(currentRoom)
-          }
-          onLeft={() =>
-            setCallRoom(null)
-          }
-          myNome={myself?.nome}
-          myAvatarTipo={myself?.avatarTipo}
-          myAvatarValor={myself?.avatarValor}
-          roster={allUsers}
-          viewingDifferentRoom={
-            viewingDifferentRoom
-          }
-          onGoToCallRoom={() => {
-            if (callRoom) {
-              moveToRoom(callRoom);
-            }
-          }}
-          sidebarWidthPx={
-            barraLateralFechada ? 0 : 320
-          }
-          onOpenChat={() => {
-            setBarraLateralFechada(false);
-            setChatMinimizado(false);
-          }}
-        />
-
-      )}
 
     </main>
   );

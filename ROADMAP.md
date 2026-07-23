@@ -178,6 +178,20 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   sem abrir a sala toda — assim dá pra ver quem existe no sistema e
   quem está offline sem inflar o mapa com salas vazias. Ao a pessoa
   conectar, a sala dela aparece por inteiro pra todo mundo.
+- **Barra de chamada vira coluna vertical na lateral esquerda**: antes
+  era uma barra fixa no rodapé que cobria o mapa (sobrepunha o
+  conteúdo). Agora é uma coluna de verdade, do mesmo jeito que a barra
+  de Chat/Usuários na direita: participantes (câmera/avatar) empilhados
+  no topo com rolagem própria, e os controles (Microfone, Câmera,
+  Compartilhar, Chat, ⚙️, Sair) fixos embaixo, sempre visíveis. Ocupa
+  espaço de verdade no layout (não é mais sobreposição), então o mapa
+  simplesmente encolhe pra abrir espaço, sem nada cobrindo nada.
+- **Cards de sala com a mesma altura**: Recepção, Sala de Reunião e
+  Espaço Natureza (e os cards pessoais entre si) agora esticam pra
+  bater com o mais alto da fileira (CSS Grid), com os assentos
+  centralizados verticalmente no espaço sobrando.
+- **Avatares dos assentos ~30% menores**: ajuda a deixar os cards de
+  sala mais compactos e a rolagem geral do mapa mais curta.
 
 ## Ainda por fazer
 

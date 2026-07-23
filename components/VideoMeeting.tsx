@@ -2347,17 +2347,15 @@ export default function VideoMeeting({
     {joined && (
 
       <div
-        style={{ right: sidebarWidthPx }}
         className="
-          fixed
-          bottom-0
-          left-0
-          z-40
-          border-t
+          flex
+          h-full
+          min-h-0
+          w-64
+          shrink-0
+          flex-col
+          border-r
           bg-white/95
-          px-4
-          py-3
-          shadow-2xl
           backdrop-blur
           dark:border-white/10
           dark:bg-slate-900/95
@@ -2366,57 +2364,60 @@ export default function VideoMeeting({
 
         <div
           className="
-            mx-auto
-            flex
-            max-w-6xl
-            flex-wrap
-            items-center
-            gap-3
+            shrink-0
+            border-b
+            px-3
+            py-3
+            dark:border-white/10
           "
         >
 
-          <div className="flex flex-col">
+          <span
+            className="
+              block
+              text-xs
+              font-semibold
+              text-slate-900
+              dark:text-slate-100
+            "
+          >
+            🎥 {room} · {participantCount}
+            {" "}participante(s)
+          </span>
 
-            <span
-              className="
-                text-xs
-                font-semibold
-                text-slate-900
-                dark:text-slate-100
-              "
-            >
-              🎥 {room} · {participantCount}
-              {" "}participante(s)
-            </span>
+          {viewingDifferentRoom &&
+            onGoToCallRoom && (
 
-            {viewingDifferentRoom &&
-              onGoToCallRoom && (
+              <button
+                onClick={onGoToCallRoom}
+                className="
+                  mt-1
+                  block
+                  text-left
+                  text-[11px]
+                  text-blue-600
+                  hover:underline
+                  dark:text-blue-400
+                "
+              >
+                ↩️ Voltar pra sala da chamada
+              </button>
 
-                <button
-                  onClick={onGoToCallRoom}
-                  className="
-                    text-left
-                    text-[11px]
-                    text-blue-600
-                    hover:underline
-                    dark:text-blue-400
-                  "
-                >
-                  ↩️ Voltar pra sala da chamada
-                </button>
+            )}
 
-              )}
-
-          </div>
+        </div>
 
           <div
             className="
               flex
+              min-h-0
               flex-1
-              items-start
+              flex-col
+              items-center
               gap-3
-              overflow-x-auto
-              py-1
+              overflow-y-auto
+              px-3
+              py-3
             "
           >
 
@@ -2704,10 +2705,19 @@ export default function VideoMeeting({
 
           </div>
 
+        <div
+          className="
+            shrink-0
+            border-t
+            px-3
+            py-3
+            dark:border-white/10
+          "
+        >
+
           <div
             className="
               grid
-              shrink-0
               grid-cols-3
               gap-2
             "
@@ -2781,23 +2791,19 @@ export default function VideoMeeting({
 
           </div>
 
-        </div>
+          {showDeviceSettings && (
 
-        {showDeviceSettings && (
-
-          <div
-            className="
-              mx-auto
-              mt-3
-              flex
-              max-w-6xl
-              flex-wrap
-              gap-4
-              border-t
-              pt-3
-              dark:border-slate-700
-            "
-          >
+            <div
+              className="
+                mt-3
+                flex
+                flex-col
+                gap-3
+                border-t
+                pt-3
+                dark:border-slate-700
+              "
+            >
 
             <label
               className="
@@ -2911,9 +2917,11 @@ export default function VideoMeeting({
 
             )}
 
-          </div>
+            </div>
 
-        )}
+          )}
+
+        </div>
 
       </div>
 

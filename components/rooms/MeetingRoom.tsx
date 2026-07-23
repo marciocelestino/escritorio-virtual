@@ -38,6 +38,9 @@ export default function MeetingRoom({
   return (
     <div
       className="
+        flex
+        h-full
+        flex-col
         rounded-2xl
         border
         bg-white
@@ -68,9 +71,11 @@ export default function MeetingRoom({
         Sala de Reunião
       </h3>
 
+      <div className="flex flex-1 items-center">
       <div
         className="
           grid
+          w-full
           grid-cols-5
           gap-x-2
           gap-y-4
@@ -124,6 +129,7 @@ export default function MeetingRoom({
           }
         )}
 
+      </div>
       </div>
 
     </div>
