@@ -28,6 +28,11 @@ type StatusValue =
   | "Almoco"
   | "Ocioso";
 
+type SpotifyTrack = {
+  nome: string;
+  artista: string;
+};
+
 type UserItem = {
   id: number;
   nome: string;
@@ -42,6 +47,7 @@ type UserItem = {
   avatarTipo?: string | null;
   avatarValor?: string | null;
   isAdmin?: boolean;
+  spotifyTrack?: SpotifyTrack | null;
 };
 
 type LivePresence = {
@@ -50,6 +56,7 @@ type LivePresence = {
   portasAbertas?: boolean;
   salaTrancada?: boolean;
   seat?: number | null;
+  spotifyTrack?: SpotifyTrack | null;
 };
 
 type EntryRequest = {
@@ -432,6 +439,7 @@ function showNotification(
         portasAbertas: live.portasAbertas,
         salaTrancada: live.salaTrancada,
         seat: live.seat,
+        spotifyTrack: live.spotifyTrack ?? null,
         online: true,
       };
     });
@@ -634,6 +642,7 @@ socket.on(
     portasAbertas?: boolean;
     salaTrancada?: boolean;
     seat?: number | null;
+    spotifyTrack?: SpotifyTrack | null;
   }>) => {
 
     const map: Record<
@@ -648,6 +657,7 @@ socket.on(
         portasAbertas: liveUser.portasAbertas,
         salaTrancada: liveUser.salaTrancada,
         seat: liveUser.seat,
+        spotifyTrack: liveUser.spotifyTrack,
       };
     });
 
@@ -815,6 +825,46 @@ socket.on(
   }
 );
 
+// O Chat Geral tem seu próprio histórico/tela (GeneralChatModal), mas a
+// notificação de @menção precisa existir mesmo com o modal fechado —
+// por isso esse listener global, igual ao de "chat-message" acima.
+socket.on(
+  "general-chat-message",
+  (msg: {
+    id: string;
+    fromId: number;
+    fromNome: string;
+    message: string;
+    at: number;
+  }) => {
+
+    if (
+      msg.fromId !== user.id &&
+      messageMentionsName(
+        msg.message,
+        user.nome
+      )
+    ) {
+
+      setMentions((prev) =>
+        [
+          {
+            id: msg.id,
+            room: "Chat Geral",
+            fromNome: msg.fromNome,
+            message: msg.message,
+            at: msg.at,
+            kind: "general" as const,
+          },
+          ...prev,
+        ].slice(0, 20)
+      );
+
+    }
+
+  }
+);
+
 // Histórico persistido de uma sala, carregado ao entrar nela pela
 // primeira vez nesta sessão (ver loadedRoomHistoryRef). Mescla com o
 // que já tiver chegado em tempo real nesse meio-tempo, sem duplicar.
@@ -934,6 +984,53 @@ setCurrentUserId(
   // socket a cada troca de sala, duplicando-os.
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [router]);
+
+  // Volta do redirect de autorização do Spotify (?spotify=conectado|
+  // negado|erro|nao-configurado) — mostra um aviso e limpa a query da
+  // URL. Lido direto de window.location em vez de useSearchParams pra
+  // não exigir um Suspense boundary só por causa disso.
+  useEffect(() => {
+
+    const params = new URLSearchParams(
+      window.location.search
+    );
+
+    const spotifyResult =
+      params.get("spotify");
+
+    if (!spotifyResult) {
+      return;
+    }
+
+    const messages: Record<string, string> = {
+      conectado:
+        "🎵 Spotify conectado! A música que você tocar vai aparecer no seu card.",
+      negado:
+        "Conexão com o Spotify cancelada.",
+      erro:
+        "Não foi possível conectar ao Spotify. Tente novamente.",
+      "nao-configurado":
+        "Integração com Spotify ainda não configurada neste ambiente.",
+    };
+
+    // setTimeout em vez de chamar showNotification direto: o lint acusa
+    // "setState síncrono dentro de efeito" (cascata de renders) —
+    // adiar pra depois do commit deste efeito evita isso.
+    const timeoutId = setTimeout(() => {
+
+      showNotification(
+        messages[spotifyResult] ??
+          "Spotify: " + spotifyResult
+      );
+
+      router.replace("/office");
+
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Processa um pedido de entrada aceito com as funções "de agora"
   // (currentUserId/currentRoom atuais) — ver comentário na declaração de
@@ -1257,6 +1354,7 @@ setCurrentUserId(
         onClearMentions={() =>
           setMentions([])
         }
+        roster={allUsers}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -1529,6 +1627,9 @@ setCurrentUserId(
                 key={user.id}
                 nome={user.nome}
                 status={user.status}
+                spotifyTrack={
+                  user.spotifyTrack
+                }
                 unreadDmCount={
                   unreadDms[user.id] ?? 0
                 }

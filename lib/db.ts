@@ -21,6 +21,14 @@ export type DbUser = {
   avatarTipo: string | null;
   avatarValor: string | null;
   isAdmin: boolean;
+  // Só o refresh token fica guardado — o access token (de vida curta) é
+  // mantido só em memória pelo server.js, nunca gravado em disco. Assim,
+  // a renovação periódica do access token (que roda em server.js, sem
+  // passar por este cache) não corre risco de sobrescrever um dado mais
+  // recente escrito por aqui, já que o único campo do Spotify persistido
+  // muda raramente (só quando o próprio Spotify decide trocar o refresh
+  // token, o que não é o caso comum).
+  spotifyRefreshToken: string | null;
 };
 
 // Se DATABASE_PATH não for definido, detecta sozinho um volume persistente
@@ -73,6 +81,7 @@ function seedUsers(): DbUser[] {
     avatarTipo: null,
     avatarValor: null,
     isAdmin: user.id === 1,
+    spotifyRefreshToken: null,
   }));
 }
 
@@ -204,6 +213,7 @@ export function createUser(user: {
     avatarTipo: null,
     avatarValor: null,
     isAdmin: Boolean(user.isAdmin),
+    spotifyRefreshToken: null,
   };
 
   users.push(created);
@@ -223,6 +233,7 @@ export function updateUser(
     avatarTipo: string | null;
     avatarValor: string | null;
     isAdmin: boolean;
+    spotifyRefreshToken: string | null;
   }>
 ): DbUser | null {
 

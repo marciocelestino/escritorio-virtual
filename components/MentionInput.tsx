@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-
-type RosterUser = {
-  id: number;
-  nome: string;
-};
+import {
+  computeMentionSuggestions,
+  insertMention,
+  type RosterUser,
+} from "@/lib/mentionSuggestions";
 
 type Props = {
   value: string;
@@ -41,40 +41,14 @@ export default function MentionInput({
     cursorPos: number
   ) {
 
-    const uptoCursor = text.slice(
-      0,
-      cursorPos
+    setSuggestions(
+      computeMentionSuggestions(
+        text,
+        cursorPos,
+        roster
+      )
     );
 
-    const match = uptoCursor.match(
-      /@(\w*)$/
-    );
-
-    if (!match) {
-      setSuggestions([]);
-      return;
-    }
-
-    const partial = match[1].toLowerCase();
-
-    const matches = roster
-      .filter((user) => {
-
-        const firstName = user.nome
-          .split(" ")[0]
-          .toLowerCase();
-
-        return (
-          firstName.startsWith(partial) ||
-          user.nome
-            .toLowerCase()
-            .startsWith(partial)
-        );
-
-      })
-      .slice(0, 6);
-
-    setSuggestions(matches);
   }
 
   function handleChange(
@@ -101,23 +75,13 @@ export default function MentionInput({
       inputRef.current?.selectionStart ??
       value.length;
 
-    const uptoCursor = value.slice(
-      0,
-      cursorPos
+    const { newText } = insertMention(
+      value,
+      cursorPos,
+      user
     );
 
-    const firstName = user.nome.split(
-      " "
-    )[0];
-
-    const replaced = uptoCursor.replace(
-      /@(\w*)$/,
-      `@${firstName} `
-    );
-
-    onChange(
-      replaced + value.slice(cursorPos)
-    );
+    onChange(newText);
 
     setSuggestions([]);
 

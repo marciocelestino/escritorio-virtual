@@ -336,6 +336,22 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   marcação própria e simples (`**negrito**`, `__sublinhado__`,
   `[texto](link)`) interpretada direto em elementos React — nunca HTML
   cru — então não tem risco de injeção de script por aí.
+- **@Menção no Chat Geral**: autocomplete de "@" (mesmo componente por
+  trás do chat de sala/DM, reaproveitado) e notificação no sino quando
+  alguém te menciona ali — mesmo com o modal do Chat Geral fechado.
+  Clicar na menção no sino abre o Chat Geral (em vez de tentar navegar
+  pra uma sala, que não existe nesse caso).
+- **Spotify — mostrar a música tocando no card**: cada pessoa conecta a
+  própria conta (OAuth, em "Meus Dados") e a faixa que estiver tocando
+  aparece no card dela pra todo mundo ("🎵 nome - artista"), atualizando
+  sozinho enquanto muda de música. Escopo combinado com o cliente: só
+  mostrar o nome da faixa, sem redistribuir/tocar o áudio pra quem mais
+  está na sala — o próprio Spotify não permite isso (restrição de
+  licenciamento do serviço, não uma limitação técnica). Só o refresh
+  token de cada pessoa fica gravado (`data/usuarios-db.json`); o access
+  token de curta duração vive só em memória no servidor, renovado por
+  uma consulta periódica (a cada 15s, só de quem está online e
+  conectado).
 
 ## Ainda por fazer
 
@@ -384,9 +400,6 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   lista "minhas conversas" pra retomar uma conversa com alguém que já
   ficou offline — precisaria de uma consulta nova no servidor (buscar
   todas as conversas que envolvem meu usuário no arquivo de mensagens).
-- **Indicador de mensagem não lida**: uma DM nova gera um aviso (toast),
-  mas não fica um contador/selo persistente em lugar nenhum até a pessoa
-  abrir a conversa de novo.
 
 ### Gravação de reuniões
 

@@ -9,6 +9,51 @@ import { getVerifiedUserId } from "@/lib/authToken";
 
 const MAX_AVATAR_LENGTH = 500_000;
 
+// Usado pra reler dados que mudam fora do fluxo de "Meus Dados" (ex.:
+// conectar o Spotify, que volta de um redirect pro OAuth em vez de passar
+// pelo PUT abaixo) — o localStorage guardado no login fica desatualizado
+// nesses casos.
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+
+  const userId = getVerifiedUserId(
+    searchParams.get("token")
+  );
+
+  if (!userId) {
+    return NextResponse.json(
+      { success: false, error: "Sessão inválida." },
+      { status: 401 }
+    );
+  }
+
+  const user = getUserById(userId);
+
+  if (!user) {
+    return NextResponse.json(
+      { success: false, error: "Usuário não encontrado." },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json({
+    success: true,
+    user: {
+      id: user.id,
+      nome: user.nome,
+      email: user.email,
+      status: user.status,
+      salaNome: user.salaNome,
+      avatarTipo: user.avatarTipo,
+      avatarValor: user.avatarValor,
+      isAdmin: user.isAdmin,
+      spotifyConnected: Boolean(
+        user.spotifyRefreshToken
+      ),
+    },
+  });
+}
+
 export async function PUT(req: Request) {
   const body = await req.json();
 
@@ -135,6 +180,9 @@ export async function PUT(req: Request) {
       avatarTipo: updated.avatarTipo,
       avatarValor: updated.avatarValor,
       isAdmin: updated.isAdmin,
+      spotifyConnected: Boolean(
+        updated.spotifyRefreshToken
+      ),
     },
   });
 }

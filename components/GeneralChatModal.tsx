@@ -3,6 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "@/lib/socket";
 import { renderRichText } from "@/lib/richText";
+import {
+  computeMentionSuggestions,
+  insertMention,
+  type RosterUser,
+} from "@/lib/mentionSuggestions";
 
 type ChatMessage = {
   id: string;
@@ -15,6 +20,7 @@ type ChatMessage = {
 type Props = {
   currentUserId: number;
   canClear: boolean;
+  roster: RosterUser[];
   onClose: () => void;
 };
 
@@ -64,6 +70,7 @@ function wrapSelection(
 export default function GeneralChatModal({
   currentUserId,
   canClear,
+  roster,
   onClose,
 }: Props) {
 
@@ -72,6 +79,9 @@ export default function GeneralChatModal({
   >([]);
 
   const [draft, setDraft] = useState("");
+
+  const [suggestions, setSuggestions] =
+    useState<RosterUser[]>([]);
 
   const textareaRef =
     useRef<HTMLTextAreaElement>(null);
@@ -169,6 +179,7 @@ export default function GeneralChatModal({
     );
 
     setDraft("");
+    setSuggestions([]);
   }
 
   function handleClear() {
@@ -182,6 +193,49 @@ export default function GeneralChatModal({
     }
 
     getSocket().emit("clear-general-chat");
+  }
+
+  function handleDraftChange(
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) {
+
+    const newValue = e.target.value;
+
+    setDraft(newValue);
+
+    setSuggestions(
+      computeMentionSuggestions(
+        newValue,
+        e.target.selectionStart ??
+          newValue.length,
+        roster
+      )
+    );
+
+  }
+
+  function pickSuggestion(user: RosterUser) {
+
+    const el = textareaRef.current;
+
+    const cursorPos =
+      el?.selectionStart ?? draft.length;
+
+    const { newText, newCursorPos } =
+      insertMention(draft, cursorPos, user);
+
+    setDraft(newText);
+
+    setSuggestions([]);
+
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(
+        newCursorPos,
+        newCursorPos
+      );
+    });
+
   }
 
   function applyFormat(
@@ -374,7 +428,57 @@ export default function GeneralChatModal({
 
         </div>
 
-        <div className="border-t p-2 dark:border-white/10">
+        <div className="relative border-t p-2 dark:border-white/10">
+
+          {suggestions.length > 0 && (
+
+            <div
+              className="
+                absolute
+                bottom-full
+                left-2
+                right-2
+                mb-1
+                overflow-hidden
+                rounded-lg
+                border
+                border-slate-200
+                bg-white
+                shadow-lg
+                dark:border-slate-700
+                dark:bg-slate-950
+              "
+            >
+
+              {suggestions.map((user) => (
+
+                <button
+                  key={user.id}
+                  type="button"
+                  onClick={() =>
+                    pickSuggestion(user)
+                  }
+                  className="
+                    block
+                    w-full
+                    px-3
+                    py-2
+                    text-left
+                    text-sm
+                    text-slate-700
+                    hover:bg-slate-100
+                    dark:text-slate-200
+                    dark:hover:bg-slate-800
+                  "
+                >
+                  @{user.nome}
+                </button>
+
+              ))}
+
+            </div>
+
+          )}
 
           <div className="mb-2 flex gap-1">
 
@@ -473,19 +577,24 @@ export default function GeneralChatModal({
             <textarea
               ref={textareaRef}
               value={draft}
-              onChange={(e) =>
-                setDraft(e.target.value)
-              }
+              onChange={handleDraftChange}
               onKeyDown={(e) => {
                 if (
                   e.key === "Enter" &&
                   !e.shiftKey
                 ) {
                   e.preventDefault();
-                  handleSend();
+
+                  if (suggestions.length > 0) {
+                    pickSuggestion(
+                      suggestions[0]
+                    );
+                  } else {
+                    handleSend();
+                  }
                 }
               }}
-              placeholder="Mensagem pro chat geral..."
+              placeholder="Mensagem pro chat geral... (@ pra mencionar)"
               maxLength={1000}
               rows={2}
               className="

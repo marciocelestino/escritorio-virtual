@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   getSessionUser,
   getSessionToken,
@@ -123,6 +123,82 @@ export default function MeusDados({
   const [erro, setErro] = useState("");
   const [salvando, setSalvando] =
     useState(false);
+
+  // null = ainda não sabemos (carregando) — busca fresca em vez de
+  // confiar no localStorage, já que conectar volta de um redirect pro
+  // OAuth do Spotify, não passa pelo formulário/PUT abaixo.
+  const [
+    spotifyConnected,
+    setSpotifyConnected,
+  ] = useState<boolean | null>(null);
+
+  const [desconectandoSpotify, setDesconectandoSpotify] =
+    useState(false);
+
+  useEffect(() => {
+
+    const token = getSessionToken();
+
+    if (!token) {
+      return;
+    }
+
+    fetch(
+      `/api/me?token=${encodeURIComponent(token)}`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setSpotifyConnected(
+            Boolean(data.user.spotifyConnected)
+          );
+        }
+      })
+      .catch(() => {});
+
+  }, []);
+
+  function conectarSpotify() {
+
+    const token = getSessionToken();
+
+    if (!token) {
+      return;
+    }
+
+    window.location.href = `/api/spotify/authorize?token=${encodeURIComponent(
+      token
+    )}`;
+
+  }
+
+  async function desconectarSpotify() {
+
+    const token = getSessionToken();
+
+    if (!token) {
+      return;
+    }
+
+    setDesconectandoSpotify(true);
+
+    try {
+
+      await fetch("/api/spotify/disconnect", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      setSpotifyConnected(false);
+
+    } finally {
+      setDesconectandoSpotify(false);
+    }
+
+  }
 
   async function handleFotoChange(
     e: React.ChangeEvent<HTMLInputElement>
@@ -407,6 +483,57 @@ export default function MeusDados({
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-300 p-3">
+            <div className="mb-2 text-sm font-medium text-slate-700">
+              🎵 Spotify
+            </div>
+
+            <p className="mb-3 text-xs text-slate-500">
+              Conecte pra mostrar, no seu card,
+              a música que estiver tocando na
+              sua conta.
+            </p>
+
+            {spotifyConnected === null ? (
+
+              <p className="text-xs text-slate-400">
+                Verificando...
+              </p>
+
+            ) : spotifyConnected ? (
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-emerald-600">
+                  ✅ Conectado
+                </span>
+
+                <button
+                  type="button"
+                  onClick={desconectarSpotify}
+                  disabled={
+                    desconectandoSpotify
+                  }
+                  className="text-sm text-red-600 hover:underline disabled:opacity-60"
+                >
+                  {desconectandoSpotify
+                    ? "Desconectando..."
+                    : "Desconectar"}
+                </button>
+              </div>
+
+            ) : (
+
+              <button
+                type="button"
+                onClick={conectarSpotify}
+                className="rounded-lg bg-[#1DB954] px-3 py-2 text-sm font-medium text-white hover:brightness-95"
+              >
+                Conectar Spotify
+              </button>
+
+            )}
           </div>
 
           <details className="rounded-lg border border-slate-300 p-3">

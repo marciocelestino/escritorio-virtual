@@ -22,18 +22,29 @@ export type Mention = {
   fromNome: string;
   message: string;
   at: number;
+  // Ausente (ou "room") = menção numa sala/DM, tratada por onMentionClick.
+  // "general" = menção no Chat Geral, que não tem sala pra ir — só abre
+  // o próprio modal aqui dentro.
+  kind?: "room" | "general";
+};
+
+type RosterUser = {
+  id: number;
+  nome: string;
 };
 
 type Props = {
   mentions?: Mention[];
   onMentionClick?: (room: string) => void;
   onClearMentions?: () => void;
+  roster?: RosterUser[];
 };
 
 export default function Header({
   mentions = [],
   onMentionClick,
   onClearMentions,
+  roster = [],
 }: Props) {
   const router = useRouter();
 
@@ -241,9 +252,18 @@ export default function Header({
                       key={mention.id}
                       onClick={() => {
 
-                        onMentionClick?.(
-                          mention.room
-                        );
+                        if (
+                          mention.kind ===
+                          "general"
+                        ) {
+                          setShowGeneralChat(
+                            true
+                          );
+                        } else {
+                          onMentionClick?.(
+                            mention.room
+                          );
+                        }
 
                         setShowMentions(false);
 
@@ -261,7 +281,10 @@ export default function Header({
                       <div className="text-xs font-semibold text-slate-200">
                         {mention.fromNome}
                         {" · "}
-                        {mention.room}
+                        {mention.kind ===
+                        "general"
+                          ? "Chat Geral"
+                          : mention.room}
                       </div>
 
                       <div className="truncate text-xs text-slate-400">
@@ -369,6 +392,7 @@ export default function Header({
             user.nome ===
             GENERAL_CHAT_CLEAR_ALLOWED_NAME
           }
+          roster={roster}
           onClose={() =>
             setShowGeneralChat(false)
           }

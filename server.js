@@ -336,6 +336,293 @@ app.prepare().then(() => {
     );
   }
 
+  // "Mostrar a música tocando no card" (integração com Spotify) — só
+  // leitura de currently-playing, nada de redistribuir/tocar o áudio pra
+  // outras pessoas (o próprio Spotify não permite isso, é restrição de
+  // licenciamento, não só técnica).
+  //
+  // Só o refresh token de cada usuário fica gravado em
+  // data/usuarios-db.json (via lib/db.ts, ver DbUser.spotifyRefreshToken).
+  // O access token (de vida curta, ~1h) fica só em memória aqui, num Map
+  // — evita ter duas escritas independentes (esse arquivo aqui e o cache
+  // do lib/db.ts usado pelas rotas /api) brigando pelo mesmo campo a cada
+  // renovação. Só grava de volta no disco no caso raro do próprio Spotify
+  // trocar o refresh token numa renovação.
+  const SPOTIFY_CLIENT_ID = process.env.SPOTIFY_CLIENT_ID;
+  const SPOTIFY_CLIENT_SECRET =
+    process.env.SPOTIFY_CLIENT_SECRET;
+
+  const spotifyAccessTokens = new Map();
+
+  // "nome|artista" da última faixa vista de cada usuário — só emite
+  // presence-update de novo quando isso muda, não a cada consulta.
+  const spotifyLastTrackKey = new Map();
+
+  function persistUsersToDisk(users) {
+    try {
+      const usersPath = resolveUsersFilePath();
+      const tmpPath = `${usersPath}.tmp`;
+
+      fs.writeFileSync(
+        tmpPath,
+        JSON.stringify(users, null, 2)
+      );
+
+      fs.renameSync(tmpPath, usersPath);
+    } catch (error) {
+      console.error(
+        "[spotify] Erro ao salvar usuários:",
+        error
+      );
+    }
+  }
+
+  function updateUserSpotifyRefreshToken(
+    userId,
+    newRefreshToken
+  ) {
+    const users = loadAllUsersFromDisk();
+    const index = users.findIndex(
+      (u) => u.id === userId
+    );
+
+    if (index === -1) {
+      return;
+    }
+
+    users[index].spotifyRefreshToken =
+      newRefreshToken;
+
+    persistUsersToDisk(users);
+  }
+
+  async function getSpotifyAccessToken(
+    userId,
+    refreshToken
+  ) {
+    const cached =
+      spotifyAccessTokens.get(userId);
+
+    if (
+      cached &&
+      cached.expiresAt > Date.now() + 5000
+    ) {
+      return cached.accessToken;
+    }
+
+    if (
+      !SPOTIFY_CLIENT_ID ||
+      !SPOTIFY_CLIENT_SECRET
+    ) {
+      return null;
+    }
+
+    try {
+
+      const basicAuth = Buffer.from(
+        `${SPOTIFY_CLIENT_ID}:${SPOTIFY_CLIENT_SECRET}`
+      ).toString("base64");
+
+      const response = await fetch(
+        "https://accounts.spotify.com/api/token",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/x-www-form-urlencoded",
+            Authorization: `Basic ${basicAuth}`,
+          },
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(
+          `[spotify] Falha ao renovar token do usuário ${userId}:`,
+          await response.text()
+        );
+        return null;
+      }
+
+      const data = await response.json();
+
+      spotifyAccessTokens.set(userId, {
+        accessToken: data.access_token,
+        expiresAt:
+          Date.now() +
+          data.expires_in * 1000,
+      });
+
+      // O Spotify normalmente não troca o refresh token numa renovação,
+      // mas se trocar, precisa ser gravado ou a próxima renovação falha.
+      if (
+        data.refresh_token &&
+        data.refresh_token !== refreshToken
+      ) {
+        updateUserSpotifyRefreshToken(
+          userId,
+          data.refresh_token
+        );
+      }
+
+      return data.access_token;
+
+    } catch (error) {
+
+      console.error(
+        `[spotify] Erro ao renovar token do usuário ${userId}:`,
+        error
+      );
+
+      return null;
+
+    }
+  }
+
+  async function fetchSpotifyNowPlaying(
+    accessToken
+  ) {
+    try {
+
+      const response = await fetch(
+        "https://api.spotify.com/v1/me/player/currently-playing",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      // 204 = nada tocando agora (resposta sem corpo).
+      if (response.status === 204) {
+        return null;
+      }
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const data = await response.json();
+
+      if (
+        !data ||
+        !data.item ||
+        !data.is_playing
+      ) {
+        return null;
+      }
+
+      const artistas = Array.isArray(
+        data.item.artists
+      )
+        ? data.item.artists
+            .map((artist) => artist.name)
+            .join(", ")
+        : "";
+
+      return {
+        nome: data.item.name,
+        artista: artistas,
+      };
+
+    } catch (error) {
+
+      console.error(
+        "[spotify] Erro ao consultar currently-playing:",
+        error
+      );
+
+      return null;
+
+    }
+  }
+
+  async function pollSpotifyForOnlineUsers() {
+
+    if (
+      !SPOTIFY_CLIENT_ID ||
+      !SPOTIFY_CLIENT_SECRET
+    ) {
+      return;
+    }
+
+    const onlineIds = Object.keys(onlineUsers);
+
+    if (onlineIds.length === 0) {
+      return;
+    }
+
+    const users = loadAllUsersFromDisk();
+    let changed = false;
+
+    for (const idString of onlineIds) {
+
+      const id = Number(idString);
+      const presence = onlineUsers[id];
+
+      if (!presence) {
+        continue;
+      }
+
+      const dbUser = users.find(
+        (u) => u.id === id
+      );
+
+      if (!dbUser || !dbUser.spotifyRefreshToken) {
+
+        if (
+          presence.spotifyTrack !== null &&
+          presence.spotifyTrack !== undefined
+        ) {
+          presence.spotifyTrack = null;
+          changed = true;
+        }
+
+        continue;
+      }
+
+      const accessToken =
+        await getSpotifyAccessToken(
+          id,
+          dbUser.spotifyRefreshToken
+        );
+
+      if (!accessToken) {
+        continue;
+      }
+
+      const track =
+        await fetchSpotifyNowPlaying(
+          accessToken
+        );
+
+      const trackKey = track
+        ? `${track.nome}|${track.artista}`
+        : null;
+
+      if (
+        spotifyLastTrackKey.get(id) !==
+        trackKey
+      ) {
+        spotifyLastTrackKey.set(id, trackKey);
+        presence.spotifyTrack = track;
+        changed = true;
+      }
+
+    }
+
+    if (changed) {
+      io.emit(
+        "presence-update",
+        Object.values(onlineUsers)
+      );
+    }
+
+  }
+
   // Acha o primeiro número de assento livre numa sala — os assentos são
   // só números (0, 1, 2...), sem precisar o servidor conhecer o layout
   // visual de cada sala (isso fica só no componente de cada sala no
@@ -1251,6 +1538,17 @@ app.prepare().then(() => {
       io.emit("presence-update", Object.values(onlineUsers));
     });
   });
+
+  const SPOTIFY_POLL_INTERVAL_MS = 15000;
+
+  setInterval(() => {
+    pollSpotifyForOnlineUsers().catch((error) => {
+      console.error(
+        "[spotify] Erro no ciclo de consulta:",
+        error
+      );
+    });
+  }, SPOTIFY_POLL_INTERVAL_MS);
 
   httpServer.listen(port, () => {
     console.log(`Servidor rodando na porta ${port}`);
