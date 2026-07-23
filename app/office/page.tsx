@@ -113,6 +113,17 @@ export default function OfficePage() {
   const [entryRequest, setEntryRequest] =
   useState<EntryRequest | null>(null);
 
+  // Pedido de entrada aceito, aguardando ser processado — não dá pra
+  // chamar moveToRoom/chooseSeat direto de dentro do handler de socket
+  // (registrado uma única vez no mount, com closure presa no
+  // currentUserId daquele primeiro render, ainda nulo). Guardar aqui e
+  // reagir num efeito à parte usa sempre a versão atual dessas funções.
+  const [acceptedEntry, setAcceptedEntry] =
+  useState<{
+    room: string;
+    seat: number;
+  } | null>(null);
+
   // Guarda o pedido de entrada que EU fiz, pra completar a troca de sala
   // (moveToRoom + chooseSeat) só depois que o dono aceitar — não precisa
   // ser state porque não afeta o que é renderizado.
@@ -645,8 +656,10 @@ socket.on(
 
     if (approved) {
 
-      moveToRoom(room);
-      chooseSeat(pending.seat);
+      setAcceptedEntry({
+        room,
+        seat: pending.seat,
+      });
 
       showNotification(
         `✅ Pedido aceito — você entrou em ${room}.`
@@ -778,6 +791,26 @@ setCurrentUserId(
   // socket a cada troca de sala, duplicando-os.
   // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [router]);
+
+  // Processa um pedido de entrada aceito com as funções "de agora"
+  // (currentUserId/currentRoom atuais) — ver comentário na declaração de
+  // acceptedEntry. moveToRoom/chooseSeat de propósito não entram nas
+  // deps: são recriadas a cada render, e só queremos reagir de fato
+  // quando acceptedEntry muda.
+  useEffect(() => {
+
+    if (!acceptedEntry) {
+      return;
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    moveToRoom(acceptedEntry.room);
+    chooseSeat(acceptedEntry.seat);
+
+    setAcceptedEntry(null);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [acceptedEntry]);
 
   useEffect(() => {
 
@@ -945,9 +978,10 @@ setCurrentUserId(
         <div
           className="
             fixed
-            top-5
-            right-5
+            top-24
+            left-1/2
             z-[60]
+            -translate-x-1/2
             rounded-xl
             bg-indigo-600
             px-5
@@ -994,9 +1028,10 @@ setCurrentUserId(
         <div
           className="
             fixed
-            top-24
-            right-5
+            top-44
+            left-1/2
             z-[60]
+            -translate-x-1/2
             rounded-xl
             bg-amber-600
             px-5

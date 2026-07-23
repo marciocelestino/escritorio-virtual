@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSessionUser } from "@/lib/session";
 import MeusDados from "@/components/MeusDados";
+import AdminPanel from "@/components/AdminPanel";
 import { useDarkMode } from "@/lib/useDarkMode";
 
 export type Mention = {
@@ -32,6 +32,11 @@ export default function Header({
   const user = getSessionUser();
 
   const [showMeusDados, setShowMeusDados] =
+    useState(false);
+
+  // Modal em vez de navegar pra /admin — navegar derrubava a chamada de
+  // vídeo em andamento (a página /office inteira desmontava).
+  const [showAdminPanel, setShowAdminPanel] =
     useState(false);
 
   const [showMentions, setShowMentions] =
@@ -96,8 +101,10 @@ export default function Header({
 
       <div className="flex items-center gap-6">
         {user?.isAdmin && (
-          <Link
-            href="/admin"
+          <button
+            onClick={() =>
+              setShowAdminPanel(true)
+            }
             title="Administração"
             className="
               rounded-lg
@@ -111,7 +118,7 @@ export default function Header({
             "
           >
             ⚙️
-          </Link>
+          </button>
         )}
 
         <div className="relative">
@@ -316,6 +323,40 @@ export default function Header({
             setShowMeusDados(false)
           }
         />
+      )}
+
+      {showAdminPanel && (
+        <div
+          className="
+            fixed
+            inset-0
+            z-50
+            flex
+            items-start
+            justify-center
+            overflow-y-auto
+            bg-black/40
+            p-4
+          "
+        >
+          <div
+            className="
+              my-8
+              w-full
+              max-w-3xl
+              rounded-2xl
+              bg-slate-100
+              p-6
+              shadow-xl
+            "
+          >
+            <AdminPanel
+              onClose={() =>
+                setShowAdminPanel(false)
+              }
+            />
+          </div>
+        </div>
       )}
     </header>
   );

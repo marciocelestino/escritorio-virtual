@@ -14,10 +14,12 @@ export default function Notification({
         z-[60]
         -translate-x-1/2
         rounded-xl
-        bg-[#007CB2]
+        border
+        border-slate-200
+        bg-white
         px-5
         py-3
-        text-[#C32E4E]
+        text-slate-900
         shadow-xl
         animate-pulse
       "

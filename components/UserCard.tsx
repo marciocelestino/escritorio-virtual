@@ -81,14 +81,16 @@ export default function UserCard({
           className="
             shrink-0
             rounded-lg
-            bg-[#007CB2]
+            border
+            border-slate-300
+            bg-white
             px-2
             py-1
             text-xs
             font-medium
-            text-[#C32E4E]
+            text-slate-900
             transition
-            hover:brightness-110
+            hover:bg-slate-50
           "
         >
           Chamar

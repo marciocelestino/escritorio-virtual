@@ -221,6 +221,26 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
 - **Avatares dos assentos um pouco maiores**: a redução de 30% (item
   acima) tinha ficado grande demais — ajustado pra um meio-termo entre
   o tamanho original e o reduzido.
+- **Corrige bug: aceitar pedido de entrada não movia a pessoa pra
+  sala**: o `moveToRoom`/`chooseSeat` estavam sendo chamados de dentro
+  de um handler de socket registrado só uma vez no carregamento da
+  página — presos numa versão "congelada" dessas funções, de antes do
+  usuário estar carregado (`currentUserId` ainda nulo), então nunca
+  faziam nada de verdade. Passaram a rodar num efeito à parte,
+  disparado por uma mudança de estado, sempre com a versão atual.
+- **Avisos de convite e pedido de entrada centralizados no topo**: os
+  banners de "fulano te chamou" e "fulano quer entrar" agora aparecem
+  empilhados no centro do topo, junto com o aviso de notificação
+  (cutucar), em vez de no canto direito.
+- **Notificação e botões "Chamar"/"Enviar" com fundo branco**: trocado
+  o azul/rosa da marca (testado na leva anterior) por fundo branco e
+  texto escuro, a pedido.
+- **Administração abre em modal**: clicar no ⚙️ não navega mais pra
+  `/admin` (o que desmontava a página inteira e derrubava a chamada de
+  vídeo em andamento) — abre um modal por cima do escritório, sem sair
+  de lugar nenhum. A página `/admin` avulsa (acesso direto por URL)
+  continua existindo, agora reaproveitando o mesmo componente
+  (`components/AdminPanel.tsx`).
 
 ## Ainda por fazer
 

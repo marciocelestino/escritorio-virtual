@@ -309,14 +309,16 @@ export default function RoomPanel({
               type="submit"
               className="
                 rounded-lg
-                bg-[#007CB2]
+                border
+                border-slate-300
+                bg-white
                 px-4
                 py-2
                 text-sm
                 font-medium
-                text-[#C32E4E]
+                text-slate-900
                 transition
-                hover:brightness-110
+                hover:bg-slate-50
               "
             >
               Enviar
