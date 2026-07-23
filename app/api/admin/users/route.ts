@@ -10,7 +10,7 @@ import {
   emailInUseByAnotherUser,
 } from "@/lib/db";
 import { getVerifiedUserId } from "@/lib/authToken";
-import { sendEmail } from "@/lib/email";
+import { sendEmail, resolveSiteUrl } from "@/lib/email";
 
 function requireAdmin(token: unknown) {
 
@@ -95,7 +95,7 @@ export async function POST(req: Request) {
     senhaHash,
   });
 
-  const siteUrl = new URL(req.url).origin;
+  const siteUrl = resolveSiteUrl(req);
 
   await sendEmail({
     to: created.email,

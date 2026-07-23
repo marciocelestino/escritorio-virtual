@@ -95,13 +95,39 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   rolagem do chat) e virou parte da coluna lateral direita, acima da
   lista de Usuários — sempre visível, com prioridade sobre a barra da
   chamada.
+- **Removida a barra de Salas da lateral esquerda**: redundante desde
+  que o mapa mostra todas as salas de uma vez.
+- **Removidos os cards "Evolução Futura" e "Usuários Online"**.
+- **Chat rola sozinho** até a mensagem mais recente, e tem o comando
+  `\clear` pra apagar o histórico da sala — só o dono (salas pessoais)
+  ou um admin (salas comuns) pode usar.
+- **Corrigido o link errado no e-mail de boas-vindas**: pegava o
+  endereço interno do servidor (`0.0.0.0:8080`) em vez do domínio
+  público; agora usa os headers de proxy corretos.
+- **Status só muda quando a própria pessoa escolhe**: removida a troca
+  automática pra "Disponível"/"Ausente" por atividade/inatividade do
+  mouse.
+- **Novos status**: Almoço 🍽️ e Ocioso 💤, além dos já existentes.
+- **Ícone de administração**: trocado o link de texto por um ícone de
+  engrenagem ⚙️ no cabeçalho.
+- **Sino de notificação por menção**: aparece quando alguém escreve
+  "@primeironome" da própria pessoa em qualquer chat de sala — mostra
+  um contador e uma lista curta das últimas menções, clicar leva até a
+  sala.
 
 ## Ainda por fazer
 
 ### Redesenho visual (em andamento, por fases)
 
-- **Central de notificações e busca global (Ctrl+K)**: recursos novos,
-  não existem hoje.
+- **Visual novo enviado pelo cliente (tema escuro, cards com ícones,
+  fita de participantes)**: pedido explícito de seguir fielmente — a
+  estrutura (mapa único, barra lateral, barra de chamada) já bate com
+  o mockup; falta a parte puramente visual (paleta, tipografia, ícones
+  no padrão do mockup) — ainda não implementada, é a próxima frente.
+- **Central de notificações mais completa e busca global (Ctrl+K)**:
+  o sino hoje só cobre menções de chat — uma central de notificações
+  de verdade (outros tipos de evento, histórico) e a busca global
+  ainda não existem.
 
 ### Controles de chamada
 

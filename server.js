@@ -1,5 +1,7 @@
 const { createServer } = require("http");
 const { createHmac, timingSafeEqual } = require("crypto");
+const fs = require("fs");
+const path = require("path");
 const next = require("next");
 const { Server } = require("socket.io");
 
@@ -89,6 +91,86 @@ app.prepare().then(() => {
   function getUserBySocketId(socketId) {
     return Object.values(onlineUsers).find(
       (user) => user.socketId === socketId
+    );
+  }
+
+  // server.js roda com Node puro (sem passar pelo build do Next), então
+  // não dá pra importar lib/db.ts (TypeScript) direto — lê o mesmo
+  // arquivo JSON de usuários igual o scripts/create-user.js já faz, só
+  // pra checagens pontuais (quem é admin, de quem é uma sala pessoal).
+  function resolveUsersFilePath() {
+    if (process.env.DATABASE_PATH) {
+      return process.env.DATABASE_PATH;
+    }
+
+    if (fs.existsSync("/data")) {
+      return path.join("/data", "usuarios.json");
+    }
+
+    return path.join(
+      process.cwd(),
+      "data",
+      "usuarios-db.json"
+    );
+  }
+
+  function loadAllUsersFromDisk() {
+    try {
+      const usersPath = resolveUsersFilePath();
+
+      if (!fs.existsSync(usersPath)) {
+        return [];
+      }
+
+      return JSON.parse(
+        fs.readFileSync(usersPath, "utf8")
+      );
+    } catch (error) {
+      console.error(
+        "Erro ao ler arquivo de usuários:",
+        error
+      );
+      return [];
+    }
+  }
+
+  function isUserAdmin(userId) {
+    const users = loadAllUsersFromDisk();
+    const user = users.find(
+      (u) => u.id === userId
+    );
+    return Boolean(user && user.isAdmin);
+  }
+
+  // Dono de uma sala pessoal: quem tem esse nome de sala (customizado ou
+  // "Espaço {nome}" padrão) associado ao próprio cadastro.
+  function getPersonalRoomOwnerId(room) {
+    const users = loadAllUsersFromDisk();
+
+    const owner = users.find(
+      (u) =>
+        (u.salaNome || `Espaço ${u.nome}`) ===
+        room
+    );
+
+    return owner ? owner.id : null;
+  }
+
+  const COMMON_ROOMS = [
+    "Recepção",
+    "Sala de Reunião",
+    "Espaço Natureza",
+  ];
+
+  // Salas comuns só o admin pode limpar (não têm um "dono" único); salas
+  // pessoais só quem é dono delas.
+  function canClearChat(userId, room) {
+    if (COMMON_ROOMS.includes(room)) {
+      return isUserAdmin(userId);
+    }
+
+    return (
+      getPersonalRoomOwnerId(room) === userId
     );
   }
 
@@ -302,6 +384,24 @@ app.prepare().then(() => {
         message: trimmed,
         at: Date.now(),
       });
+    });
+
+    // Zera o histórico do chat de uma sala — só quem tem permissão (dono
+    // da sala pessoal, ou admin nas salas comuns) via canClearChat.
+    socket.on("clear-chat", ({ room }) => {
+      const senderId = socketUsers.get(socket.id);
+      const sender = onlineUsers[senderId];
+
+      if (!sender || typeof room !== "string") {
+        return;
+      }
+
+      if (!canClearChat(senderId, room)) {
+        socket.emit("chat-clear-denied");
+        return;
+      }
+
+      io.emit("chat-cleared", { room });
     });
 
     // Pede pra um participante da chamada mutar o próprio microfone. Não

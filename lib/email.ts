@@ -37,6 +37,33 @@ function getResendClient() {
   return resendClient;
 }
 
+// req.url reflete o endereço interno do servidor (ex.: 0.0.0.0:8080) atrás
+// de um proxy como o do Railway, não o domínio público — por isso os
+// links nos e-mails saíam errados. Os headers x-forwarded-* é que trazem
+// o host/protocolo de verdade que o navegador usou.
+export function resolveSiteUrl(
+  req: Request
+): string {
+
+  if (process.env.SITE_URL) {
+    return process.env.SITE_URL;
+  }
+
+  const forwardedHost = req.headers.get(
+    "x-forwarded-host"
+  );
+
+  const forwardedProto =
+    req.headers.get("x-forwarded-proto") ||
+    "https";
+
+  if (forwardedHost) {
+    return `${forwardedProto}://${forwardedHost}`;
+  }
+
+  return new URL(req.url).origin;
+}
+
 export async function sendEmail({
   to,
   subject,

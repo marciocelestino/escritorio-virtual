@@ -8,12 +8,33 @@ import { getSessionUser } from "@/lib/session";
 import MeusDados from "@/components/MeusDados";
 import { useDarkMode } from "@/lib/useDarkMode";
 
-export default function Header() {
+export type Mention = {
+  id: string;
+  room: string;
+  fromNome: string;
+  message: string;
+  at: number;
+};
+
+type Props = {
+  mentions?: Mention[];
+  onMentionClick?: (room: string) => void;
+  onClearMentions?: () => void;
+};
+
+export default function Header({
+  mentions = [],
+  onMentionClick,
+  onClearMentions,
+}: Props) {
   const router = useRouter();
 
   const user = getSessionUser();
 
   const [showMeusDados, setShowMeusDados] =
+    useState(false);
+
+  const [showMentions, setShowMentions] =
     useState(false);
 
   const [darkMode, setDarkMode] =
@@ -36,7 +57,18 @@ export default function Header() {
       ? "🟡"
       : status === "Reuniao"
       ? "🔴"
+      : status === "Almoco"
+      ? "🍽️"
+      : status === "Ocioso"
+      ? "💤"
       : "🟢";
+
+  const statusLabel =
+    status === "Reuniao"
+      ? "Reunião"
+      : status === "Almoco"
+      ? "Almoço"
+      : status || "Disponível";
 
   return (
     <header
@@ -65,11 +97,164 @@ export default function Header() {
         {user?.isAdmin && (
           <Link
             href="/admin"
-            className="text-sm text-slate-300 hover:text-white"
+            title="Administração"
+            className="
+              rounded-lg
+              border
+              border-slate-700
+              px-3
+              py-2
+              text-sm
+              text-slate-300
+              hover:bg-slate-900
+            "
           >
-            Administração
+            ⚙️
           </Link>
         )}
+
+        <div className="relative">
+
+          <button
+            onClick={() =>
+              setShowMentions(
+                (current) => !current
+              )
+            }
+            title="Notificações"
+            className="
+              relative
+              rounded-lg
+              border
+              border-slate-700
+              px-3
+              py-2
+              text-sm
+              text-slate-300
+              hover:bg-slate-900
+            "
+          >
+            🔔
+
+            {mentions.length > 0 && (
+              <span
+                className="
+                  absolute
+                  -right-1
+                  -top-1
+                  flex
+                  h-4
+                  w-4
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-red-600
+                  text-[10px]
+                  font-bold
+                  text-white
+                "
+              >
+                {mentions.length}
+              </span>
+            )}
+          </button>
+
+          {showMentions && (
+
+            <div
+              className="
+                absolute
+                right-0
+                top-full
+                z-50
+                mt-2
+                w-72
+                rounded-xl
+                border
+                border-slate-700
+                bg-slate-900
+                p-2
+                text-left
+                shadow-xl
+              "
+            >
+
+              {mentions.length === 0 ? (
+
+                <p className="p-3 text-sm text-slate-400">
+                  Nenhuma menção por
+                  enquanto.
+                </p>
+
+              ) : (
+
+                <>
+
+                  {mentions.map((mention) => (
+
+                    <button
+                      key={mention.id}
+                      onClick={() => {
+
+                        onMentionClick?.(
+                          mention.room
+                        );
+
+                        setShowMentions(false);
+
+                      }}
+                      className="
+                        block
+                        w-full
+                        rounded-lg
+                        p-2
+                        text-left
+                        hover:bg-slate-800
+                      "
+                    >
+
+                      <div className="text-xs font-semibold text-slate-200">
+                        {mention.fromNome}
+                        {" · "}
+                        {mention.room}
+                      </div>
+
+                      <div className="truncate text-xs text-slate-400">
+                        {mention.message}
+                      </div>
+
+                    </button>
+
+                  ))}
+
+                  <button
+                    onClick={() => {
+                      onClearMentions?.();
+                      setShowMentions(false);
+                    }}
+                    className="
+                      mt-1
+                      w-full
+                      rounded-lg
+                      p-2
+                      text-center
+                      text-xs
+                      text-slate-400
+                      hover:bg-slate-800
+                    "
+                  >
+                    Marcar tudo como lido
+                  </button>
+
+                </>
+
+              )}
+
+            </div>
+
+          )}
+
+        </div>
 
         <button
           onClick={() =>
@@ -82,7 +267,7 @@ export default function Header() {
           </div>
 
           <div className="text-sm text-slate-300">
-            {emoji} {status || "Disponível"}
+            {emoji} {statusLabel}
           </div>
         </button>
 

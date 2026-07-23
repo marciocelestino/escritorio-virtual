@@ -1,7 +1,9 @@
 type Status =
   | "Disponivel"
   | "Ausente"
-  | "Reuniao";
+  | "Reuniao"
+  | "Almoco"
+  | "Ocioso";
 
 type Props = {
   status: Status;
@@ -41,6 +43,14 @@ export default function StatusSelector({
 
       <option value="Reuniao">
         🔴 Reunião
+      </option>
+
+      <option value="Almoco">
+        🍽️ Almoço
+      </option>
+
+      <option value="Ocioso">
+        💤 Ocioso
       </option>
     </select>
   );

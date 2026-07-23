@@ -32,6 +32,8 @@ export default function PositionedAvatar({
     Disponivel: "bg-green-500",
     Ausente: "bg-yellow-500",
     Reuniao: "bg-red-500",
+    Almoco: "bg-orange-500",
+    Ocioso: "bg-slate-400",
   }[status] || "bg-slate-400";
 
   return (

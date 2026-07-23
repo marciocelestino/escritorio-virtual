@@ -22,8 +22,27 @@ export default function UserCard({
       case "Reuniao":
         return "🔴";
 
+      case "Almoco":
+        return "🍽️";
+
+      case "Ocioso":
+        return "💤";
+
       default:
         return "⚪";
+    }
+  };
+
+  const getStatusLabel = () => {
+    switch (status) {
+      case "Reuniao":
+        return "Reunião";
+
+      case "Almoco":
+        return "Almoço";
+
+      default:
+        return status ?? "Disponível";
     }
   };
 
@@ -45,7 +64,7 @@ export default function UserCard({
         </div>
 
         <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-          {getStatusIcon()} {status ?? "Disponível"}
+          {getStatusIcon()} {getStatusLabel()}
           {room && (
             <span className="text-slate-400 dark:text-slate-500">
               {" "}

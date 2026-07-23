@@ -1,6 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 type User = {
   id: number;
@@ -24,12 +28,15 @@ type Props = {
   currentUserId: number | null;
   messages: ChatMessage[];
   onSendMessage: (text: string) => void;
+  onClearChat: () => void;
 };
 
 const STATUS_COLOR: Record<string, string> = {
   Disponivel: "bg-green-500",
   Ausente: "bg-yellow-500",
   Reuniao: "bg-red-500",
+  Almoco: "bg-orange-500",
+  Ocioso: "bg-slate-400",
 };
 
 export default function RoomPanel({
@@ -38,6 +45,7 @@ export default function RoomPanel({
   currentUserId,
   messages,
   onSendMessage,
+  onClearChat,
 }: Props) {
 
   const [tab, setTab] = useState<
@@ -47,9 +55,22 @@ export default function RoomPanel({
   const [draft, setDraft] =
     useState("");
 
+  const messagesEndRef =
+    useRef<HTMLDivElement>(null);
+
   const usersInRoom = users.filter(
     (user) => user.room === room
   );
+
+  // Sempre mostra as mensagens mais recentes sem precisar rolar —
+  // acompanha tanto mensagens novas quanto trocar pra aba do chat.
+  useEffect(() => {
+
+    messagesEndRef.current?.scrollIntoView({
+      block: "end",
+    });
+
+  }, [messages, tab]);
 
   function handleSend(
     event: React.FormEvent
@@ -57,11 +78,19 @@ export default function RoomPanel({
 
     event.preventDefault();
 
-    if (!draft.trim()) {
+    const trimmed = draft.trim();
+
+    if (!trimmed) {
       return;
     }
 
-    onSendMessage(draft);
+    if (trimmed === "\\clear") {
+      onClearChat();
+      setDraft("");
+      return;
+    }
+
+    onSendMessage(trimmed);
     setDraft("");
 
   }
@@ -255,7 +284,7 @@ export default function RoomPanel({
 
       {tab === "chat" && (
 
-        <div className="flex h-80 flex-col">
+        <div className="flex h-96 flex-col">
 
           <div
             className="
@@ -305,6 +334,8 @@ export default function RoomPanel({
 
             ))}
 
+            <div ref={messagesEndRef} />
+
           </div>
 
           <form
@@ -324,6 +355,7 @@ export default function RoomPanel({
                 setDraft(e.target.value)
               }
               placeholder="Mensagem para a sala..."
+              title="Digite \clear e envie pra apagar o histórico desta sala (se você tiver permissão)"
               maxLength={500}
               className="
                 flex-1

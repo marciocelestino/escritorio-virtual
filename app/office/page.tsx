@@ -5,8 +5,9 @@ import Notification from "@/components/Notification";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import Header from "@/components/Header";
-import Sidebar from "@/components/Sidebar";
+import Header, {
+  type Mention,
+} from "@/components/Header";
 import UserCard from "@/components/UserCard";
 import RoomPanel, {
   type ChatMessage,
@@ -22,14 +23,18 @@ import {
 } from "@/lib/rooms";
 import { playPingSound } from "@/lib/sound";
 
+type StatusValue =
+  | "Disponivel"
+  | "Ausente"
+  | "Reuniao"
+  | "Almoco"
+  | "Ocioso";
+
 type UserItem = {
   id: number;
   nome: string;
   email?: string;
-  status?:
-    | "Disponivel"
-    | "Ausente"
-    | "Reuniao";
+  status?: StatusValue;
   online?: boolean;
   room: string;
   portasAbertas?: boolean;
@@ -42,13 +47,41 @@ type UserItem = {
 
 type LivePresence = {
   room: string;
-  status?:
-    | "Disponivel"
-    | "Ausente"
-    | "Reuniao";
+  status?: StatusValue;
   portasAbertas?: boolean;
   seat?: number | null;
 };
+
+function escapeRegExp(text: string) {
+  return text.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&"
+  );
+}
+
+// Menção simples por primeiro nome (@primeironome) — sem lista de
+// sugestão nem negrito no texto por enquanto, só o suficiente pra
+// disparar a notificação.
+function messageMentionsName(
+  message: string,
+  nome: string
+) {
+
+  const firstName = nome
+    .trim()
+    .split(" ")[0];
+
+  if (!firstName) {
+    return false;
+  }
+
+  const pattern = new RegExp(
+    `@${escapeRegExp(firstName)}\\b`,
+    "i"
+  );
+
+  return pattern.test(message);
+}
 
 export default function OfficePage() {
   const router = useRouter();
@@ -57,14 +90,7 @@ export default function OfficePage() {
     useState("Recepção");
 
   const [status, setStatus] =
-    useState<
-      "Disponivel" |
-      "Ausente" |
-      "Reuniao"
-    >("Disponivel");
-
-    const [lastActivity, setLastActivity] =
-  useState(() => Date.now());
+    useState<StatusValue>("Disponivel");
 
     const [currentUserId, setCurrentUserId] =
   useState<number | null>(null);
@@ -96,6 +122,9 @@ export default function OfficePage() {
     Record<string, ChatMessage[]>
   >({});
 
+  const [mentions, setMentions] =
+  useState<Mention[]>([]);
+
   function sendChatMessage(text: string) {
 
     if (!currentUserId || !text.trim()) {
@@ -105,6 +134,17 @@ export default function OfficePage() {
     getSocket().emit("chat-message", {
       room: currentRoom,
       message: text,
+    });
+  }
+
+  function clearChat() {
+
+    if (!currentUserId) {
+      return;
+    }
+
+    getSocket().emit("clear-chat", {
+      room: currentRoom,
     });
   }
 
@@ -135,10 +175,7 @@ export default function OfficePage() {
   // pessoa recarregar a página.
   const presenceRef = useRef({
     room: "Recepção",
-    status: "Disponivel" as
-      | "Disponivel"
-      | "Ausente"
-      | "Reuniao",
+    status: "Disponivel" as StatusValue,
     portasAbertas: false,
   });
 
@@ -322,11 +359,19 @@ fetch("/api/users")
   const savedStatus =
     localStorage.getItem("status");
 
-  const initialStatus =
-    savedStatus === "Disponivel" ||
-    savedStatus === "Ausente" ||
-    savedStatus === "Reuniao"
-      ? savedStatus
+  const validStatuses: StatusValue[] = [
+    "Disponivel",
+    "Ausente",
+    "Reuniao",
+    "Almoco",
+    "Ocioso",
+  ];
+
+  const initialStatus: StatusValue =
+    validStatuses.includes(
+      savedStatus as StatusValue
+    )
+      ? (savedStatus as StatusValue)
       : "Disponivel";
 
   const initialPortasAbertas =
@@ -458,6 +503,52 @@ socket.on(
       ].slice(-200),
     }));
 
+    if (
+      msg.fromId !== user.id &&
+      messageMentionsName(
+        msg.message,
+        user.nome
+      )
+    ) {
+
+      setMentions((prev) =>
+        [
+          {
+            id: `${msg.room}-${msg.at}-${msg.fromId}`,
+            room: msg.room,
+            fromNome: msg.fromNome,
+            message: msg.message,
+            at: msg.at,
+          },
+          ...prev,
+        ].slice(0, 20)
+      );
+
+    }
+
+  }
+);
+
+socket.on(
+  "chat-cleared",
+  ({ room }: { room: string }) => {
+
+    setChatMessages((prev) => ({
+      ...prev,
+      [room]: [],
+    }));
+
+  }
+);
+
+socket.on(
+  "chat-clear-denied",
+  () => {
+
+    showNotification(
+      "Você não tem permissão pra limpar o chat dessa sala."
+    );
+
   }
 );
 
@@ -538,75 +629,11 @@ setCurrentUserId(
 
   }, [portasAbertas, currentUserId, mounted]);
 
-  useEffect(() => {
-
-  const updateActivity = () => {
-
-    setLastActivity(Date.now());
-
-    setStatus((current) => {
-
-      if (current === "Reuniao") {
-        return current;
-      }
-
-      return "Disponivel";
-    });
-  };
-
-  window.addEventListener(
-    "mousemove",
-    updateActivity
-  );
-
-  window.addEventListener(
-    "keydown",
-    updateActivity
-  );
-
-  return () => {
-
-    window.removeEventListener(
-      "mousemove",
-      updateActivity
-    );
-
-    window.removeEventListener(
-      "keydown",
-      updateActivity
-    );
-  };
-
-}, []);
-
-useEffect(() => {
-
-  const interval = setInterval(() => {
-
-    const inactiveTime =
-      Date.now() - lastActivity;
-
-    if (
-      inactiveTime >
-      2 * 60 * 1000
-    ) {
-
-      setStatus((current) => {
-
-        if (current === "Reuniao") {
-          return current;
-        }
-
-        return "Ausente";
-      });
-    }
-
-  }, 10000);
-
-  return () =>
-    clearInterval(interval);
-
-}, [lastActivity]);
+  // O status só muda quando a própria pessoa escolhe no seletor — já
+  // tivemos um comportamento automático aqui (mudar pra "Disponível" ao
+  // mexer o mouse, "Ausente" depois de inatividade) que foi removido a
+  // pedido: o status é uma escolha da pessoa, não algo que o sistema
+  // decide por ela.
 
   if (!mounted) {
     return null;
@@ -726,15 +753,18 @@ useEffect(() => {
 
       )}
 
-      <Header />
+      <Header
+        mentions={mentions}
+        onMentionClick={(room) => {
+          moveToRoom(room);
+          setMentions([]);
+        }}
+        onClearMentions={() =>
+          setMentions([])
+        }
+      />
 
       <div className="flex flex-1 overflow-hidden">
-
-        <Sidebar
-  currentRoom={currentRoom}
-  users={allUsers}
-  onRoomChange={moveToRoom}
-/>
 
         <section
           className="
@@ -860,99 +890,6 @@ useEffect(() => {
 
           </div>
 
-          <div
-            className="
-              grid
-              gap-4
-              md:grid-cols-2
-              xl:grid-cols-3
-            "
-          >
-
-            <div
-              className="
-                rounded-2xl
-                border
-                bg-white
-                p-5
-                shadow-sm
-                dark:border-slate-700
-                dark:bg-slate-900
-              "
-            >
-
-              <h4
-                className="
-                  font-semibold
-                  text-slate-900
-                  dark:text-slate-100
-                "
-              >
-                Evolução Futura
-              </h4>
-
-              <p
-                className="
-                  mt-2
-                  text-sm
-                  text-slate-600
-                  dark:text-slate-400
-                "
-              >
-                Ideias para as próximas fases:
-                responsividade para celular,
-                webapp instalável (PWA),
-                chat privado e em grupo com @menção,
-                central de notificações,
-                busca global,
-                piso com visual mais próximo do mockup enviado,
-                gravação de reuniões,
-                cargos e salas restritas por equipe,
-                plano de fundo da câmera,
-                e compartilhamento de tela aprimorado.
-              </p>
-
-            </div>
-
-            <div
-              className="
-                rounded-2xl
-                border
-                bg-white
-                p-5
-                shadow-sm
-                dark:border-slate-700
-                dark:bg-slate-900
-              "
-            >
-
-              <h4
-                className="
-                  font-semibold
-                  text-slate-900
-                  dark:text-slate-100
-                "
-              >
-                Usuários Online
-              </h4>
-
-              <p
-                className="
-                  mt-2
-                  text-sm
-                  text-slate-600
-                  dark:text-slate-400
-                "
-              >
-                {onlineUsers.length}
-                {" "}
-                usuários ativos.
-              </p>
-
-            </div>
-
-          </div>
-
         </section>
 
         <aside
@@ -980,6 +917,7 @@ useEffect(() => {
                 chatMessages[currentRoom] ?? []
               }
               onSendMessage={sendChatMessage}
+              onClearChat={clearChat}
             />
 
           </div>
