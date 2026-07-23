@@ -71,18 +71,26 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   `localStorage`, usando as variantes `dark:` do Tailwind — nunca pela
   preferência do sistema (é assim que quebrou a legibilidade da vez
   passada). Cobre a página do escritório e seus componentes (salas,
-  barras laterais, painel de participantes/chat, chamada); as páginas
-  de admin, login e "Meus Dados" ainda não foram cobertas — ver item
-  abaixo.
+  barras laterais, painel de participantes/chat, chamada). Decidido não
+  cobrir admin, login e "Meus Dados" — ficam só no tema claro mesmo.
+- **Mapa do escritório inteiro**: todas as salas (comuns e pessoais)
+  visíveis ao mesmo tempo numa única visão, no lugar de escolher uma
+  sala por vez — inspirado num mockup visual enviado pelo cliente.
+  Clicar num lugar vazio em qualquer sala já muda pra ela e senta lá
+  (mesmo se não for a sala "atual"). Sala de Reunião aparece maior/mais
+  central, como no mockup. Substituiu o "pulso do escritório" (tira de
+  pastilhas), que ficou redundante com a ocupação já visível no mapa.
 
 ## Ainda por fazer
 
 ### Redesenho visual (em andamento, por fases)
 
-- **Modo escuro nas páginas restantes**: admin, login/cadastro e o
-  modal "Meus Dados" ainda estão só no tema claro.
 - **Central de notificações e busca global (Ctrl+K)**: recursos novos,
   não existem hoje.
+- **Piso com visual mais próximo do mockup** (texturas de madeira/pedra
+  em estilo isométrico): o mapa hoje reaproveita a decoração em CSS já
+  existente (formas simples), não o visual fotorrealista/3D do mockup
+  — isso exigiria assets de ilustração de verdade, não só código.
 
 ### Controles de chamada
 

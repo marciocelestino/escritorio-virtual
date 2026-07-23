@@ -11,13 +11,15 @@ import UserCard from "@/components/UserCard";
 import RoomPanel, {
   type ChatMessage,
 } from "@/components/RoomPanel";
-import RoomPulse from "@/components/RoomPulse";
 import StatusSelector from "@/components/StatusSelector";
 import { getSessionUser, getSessionToken } from "@/lib/session";
 import { useMounted } from "@/lib/useMounted";
-import RoomView from "@/components/RoomView";
+import OfficeMap from "@/components/OfficeMap";
 import VideoMeeting from "@/components/VideoMeeting";
-import { roomSupportsCall } from "@/lib/rooms";
+import {
+  roomSupportsCall,
+  buildRoomList,
+} from "@/lib/rooms";
 import { playPingSound } from "@/lib/sound";
 
 type UserItem = {
@@ -224,6 +226,22 @@ function chooseSeat(seat: number) {
       },
     };
   });
+}
+
+// Como o mapa mostra todas as salas ao mesmo tempo, clicar num lugar
+// vazio de uma sala em que a pessoa ainda não está precisa fazer as duas
+// coisas: mudar de sala e já sentar no lugar clicado (não só sentar em
+// qualquer lugar livre, que é o que aconteceria só com moveToRoom).
+function handleSeatClick(
+  room: string,
+  seat: number
+) {
+
+  if (room !== currentRoom) {
+    moveToRoom(room);
+  }
+
+  chooseSeat(seat);
 }
 
 function showNotification(
@@ -594,21 +612,6 @@ useEffect(() => {
     return null;
   }
 
-  const getRoomType = () => {
-
-    switch (currentRoom) {
-
-      case "Sala de Reunião":
-        return "Reunião";
-
-      case "Espaço Natureza":
-        return "Convivência";
-
-      default:
-        return "Escritório";
-    }
-  };
-
   // Enquanto não estiver em nenhuma chamada, o dock representa a sala que
   // está sendo vista agora. Assim que entra numa chamada, `callRoom` fica
   // fixo naquela sala — navegar pra outra sala não muda mais o `room` da
@@ -648,6 +651,17 @@ useEffect(() => {
   const myself = allUsers.find(
     (user) => user.id === currentUserId
   );
+
+  const allRoomNames = buildRoomList(
+    allUsers
+  ).map((room) => room.nome);
+
+  const roomsLivres = allRoomNames.filter(
+    (roomName) =>
+      !onlineUsers.some(
+        (user) => user.room === roomName
+      )
+  ).length;
 
   const viewingDifferentRoom = Boolean(
     callRoom !== null &&
@@ -730,12 +744,6 @@ useEffect(() => {
           "
         >
 
-          <RoomPulse
-            currentRoom={currentRoom}
-            users={allUsers}
-            onSelect={moveToRoom}
-          />
-
           <div
             className="
               mb-6
@@ -756,7 +764,7 @@ useEffect(() => {
                   dark:text-slate-100
                 "
               >
-                Sala Atual
+                Escritório Internit
               </h2>
 
               <p
@@ -767,7 +775,11 @@ useEffect(() => {
                   dark:text-slate-400
                 "
               >
-                {currentRoom}
+                {roomsLivres} salas livres
+                {" · "}
+                {onlineUsers.length}
+                {" "}
+                pessoas online
               </p>
 
             </div>
@@ -826,111 +838,25 @@ useEffect(() => {
 
           </div>
 
-          <div
-            className="
-              mb-8
-              rounded-2xl
-              border
-              bg-white
-              p-6
-              shadow-sm
-              dark:border-slate-700
-              dark:bg-slate-900
-            "
-          >
+          <div className="mb-8">
 
-            <h3
-              className="
-                text-3xl
-                font-semibold
-                text-slate-900
-                dark:text-slate-100
-              "
-            >
-              {currentRoom}
-            </h3>
+            <OfficeMap
+              users={allUsers}
+              currentUserId={currentUserId ?? 0}
+              onUserClick={(userId, name) => {
 
-            {currentRoom ===
-              "Espaço Natureza" && (
+                getSocket().emit(
+                  "poke",
+                  { to: userId }
+                );
 
-              <div
-                className="
-                  mt-4
-                  rounded-lg
-                  border
-                  border-green-200
-                  bg-green-50
-                  p-4
-                  dark:border-green-800
-                  dark:bg-green-900/20
-                  dark:text-green-100
-                "
-              >
+                showNotification(
+                  `Você chamou ${name}`
+                );
 
-                🌳 Árvores
-                <br />
-
-                🌿 Área de descanso
-                <br />
-
-                🦆 Pequeno lago
-                <br />
-
-                ☕ Conversas informais
-
-              </div>
-
-            )}
-
-            <div
-              className="
-                mt-4
-                space-y-2
-                text-slate-600
-                dark:text-slate-400
-              "
-            >
-
-              <p>
-                👥 Usuários presentes:
-                {" "}
-                {
-                  onlineUsers.filter(
-                    (user) =>
-                      user.room === currentRoom
-                  ).length
-                }
-              </p>
-
-              <p>
-                🏢 Tipo:
-                {" "}
-                {getRoomType()}
-              </p>
-
-              <p>
-                🟢 Status:
-                Aberta
-              </p>
-<RoomView
-  room={currentRoom}
-  users={onlineUsers}
-  currentUserId={currentUserId ?? 0}
-  onUserClick={(userId, name) => {
-
-    getSocket().emit(
-      "poke",
-      { to: userId }
-    );
-
-    showNotification(
-      `Você chamou ${name}`
-    );
-
-  }}
-  onSeatClick={chooseSeat}
-/>
-            </div>
+              }}
+              onSeatClick={handleSeatClick}
+            />
 
           </div>
 
@@ -977,9 +903,9 @@ useEffect(() => {
                 responsividade para celular,
                 webapp instalável (PWA),
                 chat privado e em grupo com @menção,
-                modo escuro no admin/login/Meus Dados,
                 central de notificações,
                 busca global,
+                piso com visual mais próximo do mockup enviado,
                 gravação de reuniões,
                 cargos e salas restritas por equipe,
                 plano de fundo da câmera,
