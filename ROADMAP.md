@@ -124,6 +124,29 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   (tom mais profundo, bordas translúcidas em vez de cinza sólido), e
   botões da barra de chamada com texto (Microfone/Câmera/Compartilhar)
   no lugar de só ícone.
+- **Ajustes finos de layout (2ª rodada do mockup)**: removido o texto
+  "Escritório Internit / salas livres · pessoas online" abaixo do
+  logo; logo maior no cabeçalho; barra lateral (Chat + Usuários
+  Online) agora pode ser fechada por inteiro (botão «/» perto de
+  "Portas abertas"), e Chat/Usuários Online minimizam de forma
+  independente um do outro (ícone −/+ em cada cabeçalho de seção);
+  aba "Participantes" removida do painel — virou só Chat, com o
+  avatar da pessoa ao lado do nome em cada mensagem; cards de vídeo
+  da fita da chamada um pouco maiores; botões da barra de chamada
+  viraram chips (ícone em cima, rótulo embaixo) com um botão "Chat"
+  novo que reabre a barra lateral.
+- **Compartilhamento de tela em card separado**: agora usa uma faixa
+  de vídeo dedicada (sender próprio) por participante, então a tela
+  compartilhada aparece como um card A MAIS na fita da chamada — a
+  câmera (ou avatar) da pessoa continua aparecendo normalmente, sem
+  ser substituída. Isso também resolveu de quebra dois itens que
+  estavam pendentes: quem entra na chamada depois que o
+  compartilhamento já começou também recebe a tela (a conexão nova já
+  sai com os dois sender de vídeo, câmera e tela), e quem está
+  compartilhando agora vê a própria tela também (antes só quem
+  recebia via). Como não foi possível testar com múltiplos
+  navegadores reais neste ambiente, vale uma conferida com 2+ pessoas
+  numa chamada de verdade.
 
 ## Ainda por fazer
 
@@ -149,20 +172,6 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
 
 ### Compartilhamento de tela
 
-- **Corrigir: quem entra depois de iniciado o compartilhamento não
-  consegue ver** — hoje um participante novo só recebe as faixas de
-  vídeo que já existiam no momento em que ele entrou na chamada; a tela
-  compartilhada de quem já estava lá não é enviada automaticamente pra
-  quem chega depois.
-- **Mostrar o compartilhamento separado da câmera/avatar da pessoa**:
-  hoje compartilhar tela substitui o vídeo da própria pessoa no card
-  dela. A ideia é continuar mostrando a câmera (ou avatar) normalmente
-  e exibir a tela compartilhada num espaço à parte, maior. Tecnicamente
-  precisa de uma segunda faixa de vídeo dedicada por participante (hoje
-  só existe uma "faixa de vídeo" por pessoa, que é reaproveitada pra
-  câmera ou tela).
-- **Quem está compartilhando também ver a própria tela** que está sendo
-  compartilhada (hoje só quem recebe vê).
 - **Rabiscar / apagar rabisco na tela compartilhada**: uma camada de
   desenho por cima do compartilhamento, sincronizada entre os
   participantes (precisa de eventos de socket pra cada traço/apagar).

@@ -42,7 +42,16 @@ type Props = {
   viewingDifferentRoom?: boolean;
   onGoToCallRoom?: () => void;
   roster?: RosterUser[];
+  // Largura atual da barra lateral (Chat/Usuários) em app/office/page.tsx —
+  // a barra da chamada reserva esse espaço pra não ficar por baixo dela, e
+  // precisa saber quando ela está fechada pra ocupar a tela toda.
+  sidebarWidthPx?: number;
+  onOpenChat?: () => void;
 };
+
+// Prefixo usado no id "expandido" pra distinguir a tela compartilhada de um
+// participante da câmera dele — ambas podem estar visíveis ao mesmo tempo.
+const SCREEN_PREFIX = "screen-";
 
 const ICE_SERVERS = [
   { urls: "stun:stun.l.google.com:19302" },
@@ -96,7 +105,7 @@ function VideoTile({
           large
             ? "w-full"
             : small
-            ? "h-20 w-20 shrink-0"
+            ? "h-28 w-28 shrink-0"
             : "w-full max-w-md"
         }
         rounded-xl
@@ -199,7 +208,7 @@ function CameraOffAvatar({
         }
         ${
           small
-            ? "h-20 w-20 shrink-0"
+            ? "h-28 w-28 shrink-0"
             : "h-40 w-full"
         }
       `}
@@ -218,7 +227,7 @@ function CameraOffAvatar({
           shadow-md
           ${
             small
-              ? "h-9 w-9 text-xs"
+              ? "h-11 w-11 text-sm"
               : "h-16 w-16 text-lg"
           }
         `}
@@ -320,6 +329,58 @@ function RemoteAudio({
   );
 }
 
+// Botão da barra de chamada — ícone em cima, rótulo embaixo, num "chip"
+// arredondado (mesma linguagem visual do Zoom/Meet), em vez de ícone e
+// texto lado a lado como antes.
+function CallBarButton({
+  icon,
+  label,
+  active = false,
+  danger = false,
+  onClick,
+  title,
+}: {
+  icon: string;
+  label?: string;
+  active?: boolean;
+  danger?: boolean;
+  onClick?: () => void;
+  title?: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      className={`
+        flex
+        min-w-[56px]
+        flex-col
+        items-center
+        gap-1
+        rounded-xl
+        px-3
+        py-2
+        text-[11px]
+        font-medium
+        transition
+        ${
+          danger
+            ? "bg-red-600 text-white hover:bg-red-700"
+            : active
+            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+            : "bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
+        }
+      `}
+    >
+      <span className="text-lg leading-none">
+        {icon}
+      </span>
+
+      {label && <span>{label}</span>}
+    </button>
+  );
+}
+
 export default function VideoMeeting({
   room,
   autoJoin = false,
@@ -332,6 +393,8 @@ export default function VideoMeeting({
   viewingDifferentRoom = false,
   onGoToCallRoom,
   roster,
+  sidebarWidthPx = 320,
+  onOpenChat,
 }: Props) {
 
   const localStreamRef =
@@ -345,13 +408,27 @@ export default function VideoMeeting({
       new Map()
     );
 
-  // Guarda o sender de vídeo já criado por participante — permite trocar
-  // o que está sendo enviado (câmera ↔ tela ↔ nada) com replaceTrack, sem
-  // precisar renegociar de novo a cada troca.
+  // Guarda o sender de vídeo (câmera) já criado por participante — permite
+  // ligar/desligar a câmera com replaceTrack, sem precisar renegociar de
+  // novo a cada troca.
   const videoSendersRef =
     useRef<Map<string, RTCRtpSender>>(
       new Map()
     );
+
+  // Sender DEDICADO de compartilhamento de tela por participante — separado
+  // do sender de câmera de propósito, pra tela e câmera poderem ir juntas
+  // (duas faixas de vídeo por conexão) em vez de uma substituir a outra.
+  const screenSendersRef =
+    useRef<Map<string, RTCRtpSender>>(
+      new Map()
+    );
+
+  // Marca, por participante remoto, o id da stream de vídeo reconhecida
+  // como "câmera" (a primeira que chegar) — qualquer outra stream de vídeo
+  // que aparecer depois é tratada como tela compartilhada.
+  const remoteCameraStreamIdRef =
+    useRef<Map<string, string>>(new Map());
 
   const joiningRef =
     useRef(false);
@@ -419,6 +496,21 @@ export default function VideoMeeting({
   ] = useState<
     Record<string, MediaStream>
   >({});
+
+  // Tela compartilhada de cada participante remoto — guardada separada da
+  // câmera (remoteStreams) pra poder mostrar as duas ao mesmo tempo, em
+  // cards diferentes.
+  const [
+    remoteScreenStreams,
+    setRemoteScreenStreams,
+  ] = useState<
+    Record<string, MediaStream>
+  >({});
+
+  // Pré-visualização da própria tela sendo compartilhada — sem isso, quem
+  // compartilha não via a própria tela (só quem recebia).
+  const [screenStream, setScreenStream] =
+    useState<MediaStream | null>(null);
 
   const [
     participantNames,
@@ -490,9 +582,23 @@ export default function VideoMeeting({
       remoteSocketId
     );
 
+    screenSendersRef.current.delete(
+      remoteSocketId
+    );
+
+    remoteCameraStreamIdRef.current.delete(
+      remoteSocketId
+    );
+
     detachAnalyser(remoteSocketId);
 
     setRemoteStreams((prev) => {
+      const next = { ...prev };
+      delete next[remoteSocketId];
+      return next;
+    });
+
+    setRemoteScreenStreams((prev) => {
       const next = { ...prev };
       delete next[remoteSocketId];
       return next;
@@ -523,7 +629,9 @@ export default function VideoMeeting({
     });
 
     setExpandedId((current) =>
-      current === remoteSocketId
+      current === remoteSocketId ||
+      current ===
+        `${SCREEN_PREFIX}${remoteSocketId}`
         ? null
         : current
     );
@@ -633,21 +741,90 @@ export default function VideoMeeting({
 
     peer.ontrack = (event) => {
 
-      setRemoteStreams((prev) => ({
-        ...prev,
-        [remoteSocketId]:
-          event.streams[0],
-      }));
+      const incomingStream =
+        event.streams[0];
 
-      // A câmera desligar/ligar depois de conectado não dispara um novo
-      // "ontrack" (o remetente só troca a faixa com replaceTrack) — quem
-      // recebe percebe isso pelo próprio evento de mute/unmute da faixa de
-      // vídeo. Sem isso, o lado remoto ficava com o último quadro
-      // recebido "congelado" em vez de trocar pro avatar.
+      // O áudio (microfone) sempre viaja junto da câmera na mesma stream
+      // original — nunca junto da tela compartilhada (que não manda
+      // áudio nesse app). Usa isso pra aprender qual stream id é "a
+      // câmera" desse participante assim que o áudio chegar, mesmo que a
+      // faixa de vídeo chegue antes ou depois dela.
+      if (
+        event.track.kind === "audio" &&
+        incomingStream &&
+        !remoteCameraStreamIdRef.current.has(
+          remoteSocketId
+        )
+      ) {
+        remoteCameraStreamIdRef.current.set(
+          remoteSocketId,
+          incomingStream.id
+        );
+      }
+
       if (event.track.kind === "video") {
 
         const videoTrack = event.track;
 
+        const knownCameraStreamId =
+          remoteCameraStreamIdRef.current.get(
+            remoteSocketId
+          );
+
+        const isScreenShare = Boolean(
+          knownCameraStreamId &&
+            incomingStream &&
+            incomingStream.id !==
+              knownCameraStreamId
+        );
+
+        if (isScreenShare) {
+
+          setRemoteScreenStreams((prev) => ({
+            ...prev,
+            [remoteSocketId]: incomingStream,
+          }));
+
+          // Chama atenção pra tela recém-compartilhada, mostrando ela em
+          // destaque assim que aparece (em vez de só um card discreto na
+          // fita).
+          setExpandedId(
+            `${SCREEN_PREFIX}${remoteSocketId}`
+          );
+
+          videoTrack.onmute = () => {
+            setRemoteScreenStreams((prev) => {
+              const next = { ...prev };
+              delete next[remoteSocketId];
+              return next;
+            });
+          };
+
+          videoTrack.onunmute = () => {
+            setRemoteScreenStreams((prev) => ({
+              ...prev,
+              [remoteSocketId]: incomingStream,
+            }));
+          };
+
+          return;
+        }
+
+        if (
+          !knownCameraStreamId &&
+          incomingStream
+        ) {
+          remoteCameraStreamIdRef.current.set(
+            remoteSocketId,
+            incomingStream.id
+          );
+        }
+
+        // A câmera desligar/ligar depois de conectado não dispara um novo
+        // "ontrack" (o remetente só troca a faixa com replaceTrack) — quem
+        // recebe percebe isso pelo próprio evento de mute/unmute da faixa
+        // de vídeo. Sem isso, o lado remoto ficava com o último quadro
+        // recebido "congelado" em vez de trocar pro avatar.
         setRemoteCameraOff((prev) => ({
           ...prev,
           [remoteSocketId]:
@@ -669,6 +846,11 @@ export default function VideoMeeting({
         };
 
       }
+
+      setRemoteStreams((prev) => ({
+        ...prev,
+        [remoteSocketId]: incomingStream,
+      }));
 
     };
 
@@ -753,6 +935,30 @@ export default function VideoMeeting({
         });
     }
 
+    // Se já estivermos compartilhando a tela quando esse participante
+    // entrar/reconectar, manda a tela pra ele também num sender dedicado —
+    // sem isso, quem chega depois do início do compartilhamento nunca via
+    // a tela.
+    const screenStream =
+      screenStreamRef.current;
+
+    const screenTrack =
+      screenStream?.getVideoTracks()[0];
+
+    if (screenStream && screenTrack) {
+
+      const sender = peer.addTrack(
+        screenTrack,
+        screenStream
+      );
+
+      screenSendersRef.current.set(
+        remoteSocketId,
+        sender
+      );
+
+    }
+
     peersRef.current.set(
       remoteSocketId,
       peer
@@ -761,11 +967,10 @@ export default function VideoMeeting({
     return peer;
   }
 
-  // Envia uma faixa de vídeo (câmera ou tela) para um participante: reusa
-  // o sender já existente com replaceTrack (não precisa renegociar) ou,
-  // se ainda não existir nenhum sender de vídeo com esse participante
-  // (ex.: quem entrou só com áudio via portas abertas), cria um novo e
-  // renegocia a conexão.
+  // Envia a faixa de vídeo da câmera pra um participante: reusa o sender já
+  // existente com replaceTrack (não precisa renegociar) ou, se ainda não
+  // existir nenhum sender de vídeo com esse participante (ex.: quem entrou
+  // só com áudio via portas abertas), cria um novo e renegocia a conexão.
   async function sendVideoTrackToPeer(
     remoteId: string,
     peer: RTCPeerConnection,
@@ -823,6 +1028,71 @@ export default function VideoMeeting({
     }
   }
 
+  // Envia a faixa de vídeo da TELA compartilhada pra um participante — usa
+  // um sender dedicado (screenSendersRef), separado do sender de câmera,
+  // pra tela e câmera chegarem como duas faixas independentes do outro
+  // lado (dois cards), em vez de uma substituir a outra.
+  async function sendScreenTrackToPeer(
+    remoteId: string,
+    peer: RTCPeerConnection,
+    track: MediaStreamTrack | null
+  ) {
+
+    const existingSender =
+      screenSendersRef.current.get(
+        remoteId
+      );
+
+    if (existingSender) {
+      await existingSender.replaceTrack(
+        track
+      );
+      return;
+    }
+
+    if (!track) {
+      return;
+    }
+
+    const sender = peer.addTrack(
+      track,
+      screenStreamRef.current ??
+        new MediaStream([track])
+    );
+
+    screenSendersRef.current.set(
+      remoteId,
+      sender
+    );
+
+    try {
+
+      const offer =
+        await peer.createOffer();
+
+      await peer.setLocalDescription(
+        offer
+      );
+
+      getSocket().emit(
+        "offer",
+        {
+          to: remoteId,
+          offer,
+        }
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Erro ao renegociar compartilhamento de tela com",
+        remoteId,
+        error
+      );
+
+    }
+  }
+
   function stopAllTracks() {
 
     localStreamRef.current
@@ -864,14 +1134,18 @@ export default function VideoMeeting({
 
     peersRef.current.clear();
     videoSendersRef.current.clear();
+    screenSendersRef.current.clear();
+    remoteCameraStreamIdRef.current.clear();
 
     setRemoteStreams({});
+    setRemoteScreenStreams({});
     setRemoteMicOff({});
     setExpandedId(null);
 
     stopAllTracks();
 
     setStream(null);
+    setScreenStream(null);
     setJoined(false);
     setSharingScreen(false);
     setAutoJoined(false);
@@ -1253,23 +1527,28 @@ export default function VideoMeeting({
 
     try {
 
-      const screenStream =
+      const newScreenStream =
         await navigator.mediaDevices.getDisplayMedia({
           video: true,
         });
 
       const screenTrack =
-        screenStream.getVideoTracks()[0];
+        newScreenStream.getVideoTracks()[0];
 
       screenStreamRef.current =
-        screenStream;
+        newScreenStream;
 
+      setScreenStream(newScreenStream);
+
+      // Sender dedicado por participante — a câmera continua sendo
+      // enviada normalmente ao mesmo tempo, num sender separado, então a
+      // tela aparece como um card A MAIS, não no lugar da câmera.
       for (const [
         remoteId,
         peer,
       ] of peersRef.current.entries()) {
 
-        await sendVideoTrackToPeer(
+        await sendScreenTrackToPeer(
           remoteId,
           peer,
           screenTrack
@@ -1295,16 +1574,9 @@ export default function VideoMeeting({
 
   function stopScreenShare() {
 
-    const cameraTrack =
-      localStreamRef.current
-        ?.getVideoTracks()[0] ??
-      null;
-
-    videoSendersRef.current.forEach(
+    screenSendersRef.current.forEach(
       (sender) => {
-        sender.replaceTrack(
-          cameraTrack
-        );
+        sender.replaceTrack(null);
       }
     );
 
@@ -1315,6 +1587,7 @@ export default function VideoMeeting({
       );
 
     screenStreamRef.current = null;
+    setScreenStream(null);
 
     setSharingScreen(false);
   }
@@ -1544,8 +1817,11 @@ export default function VideoMeeting({
 
       peersRef.current.clear();
       videoSendersRef.current.clear();
+      screenSendersRef.current.clear();
+      remoteCameraStreamIdRef.current.clear();
 
       setRemoteStreams({});
+      setRemoteScreenStreams({});
 
       socket.emit(
         "join-meeting",
@@ -1899,24 +2175,49 @@ export default function VideoMeeting({
   const remoteEntries =
     Object.entries(remoteStreams);
 
+  const isExpandedScreen = Boolean(
+    expandedId?.startsWith(SCREEN_PREFIX)
+  );
+
+  const expandedScreenOwnerId =
+    isExpandedScreen && expandedId
+      ? expandedId.slice(
+          SCREEN_PREFIX.length
+        )
+      : null;
+
   const expandedStream =
     expandedId === "local"
       ? stream
+      : expandedId ===
+        `${SCREEN_PREFIX}local`
+      ? screenStream
+      : expandedScreenOwnerId
+      ? remoteScreenStreams[
+          expandedScreenOwnerId
+        ]
       : expandedId
       ? remoteStreams[expandedId]
       : null;
 
   const expandedRosterUser =
-    expandedId && expandedId !== "local"
+    expandedId &&
+    expandedId !== "local" &&
+    expandedId !== `${SCREEN_PREFIX}local`
       ? roster?.find(
           (user) =>
             user.id ===
-            participantUserIds[expandedId]
+            participantUserIds[
+              expandedScreenOwnerId ??
+                expandedId
+            ]
         )
       : undefined;
 
   const expandedCameraOff =
-    expandedId === "local"
+    isExpandedScreen
+      ? false
+      : expandedId === "local"
       ? !cameraOn
       : expandedId !== null &&
         remoteCameraOff[expandedId] !== false;
@@ -1943,16 +2244,19 @@ export default function VideoMeeting({
       )
     )}
 
-    {/* right-[336px] reserva os 320px da barra lateral de Participantes/
-        Chat (sempre visível em app/office/page.tsx) + 16px de respiro —
-        sem isso, esses elementos fixos ficariam escondidos atrás dela. */}
+    {/* O deslocamento à direita reserva o espaço da barra lateral de Chat/
+        Usuários (app/office/page.tsx) + 16px de respiro — quando ela está
+        fechada, sidebarWidthPx vem 0 e esses elementos fixos ocupam a
+        largura toda. */}
     {!joined && (
 
       <div
+        style={{
+          right: sidebarWidthPx + 16,
+        }}
         className="
           fixed
           bottom-4
-          right-[336px]
           z-40
           w-72
           rounded-2xl
@@ -2012,11 +2316,11 @@ export default function VideoMeeting({
     {joined && (
 
       <div
+        style={{ right: sidebarWidthPx }}
         className="
           fixed
           bottom-0
           left-0
-          right-80
           z-40
           border-t
           bg-white/95
@@ -2133,6 +2437,38 @@ export default function VideoMeeting({
 
             </div>
 
+            {screenStream && (
+
+              <div className="flex flex-col items-center">
+
+                <VideoTile
+                  stream={screenStream}
+                  small
+                  onClick={() =>
+                    toggleExpanded(
+                      `${SCREEN_PREFIX}local`
+                    )
+                  }
+                />
+
+                <span
+                  className="
+                    mt-1
+                    max-w-20
+                    truncate
+                    text-center
+                    text-[10px]
+                    text-slate-500
+                    dark:text-slate-400
+                  "
+                >
+                  🖥️ Sua tela
+                </span>
+
+              </div>
+
+            )}
+
             {remoteEntries.map(
               ([socketId, remoteStream]) => {
 
@@ -2147,10 +2483,15 @@ export default function VideoMeeting({
                     socketId
                   ] !== false;
 
-                return (
+                const remoteScreenStream =
+                  remoteScreenStreams[
+                    socketId
+                  ];
+
+                return [
 
                 <div
-                  key={socketId}
+                  key={`cam-${socketId}`}
                   className="
                     group
                     relative
@@ -2283,9 +2624,49 @@ export default function VideoMeeting({
                       "Participante"}
                   </span>
 
-                </div>
+                </div>,
 
-                );
+                remoteScreenStream && (
+
+                  <div
+                    key={`screen-${socketId}`}
+                    className="flex flex-col items-center"
+                  >
+
+                    <VideoTile
+                      stream={remoteScreenStream}
+                      small
+                      onClick={() =>
+                        toggleExpanded(
+                          `${SCREEN_PREFIX}${socketId}`
+                        )
+                      }
+                    />
+
+                    <span
+                      className="
+                        mt-1
+                        max-w-20
+                        truncate
+                        text-center
+                        text-[10px]
+                        text-slate-500
+                        dark:text-slate-400
+                      "
+                    >
+                      🖥️{" "}
+                      {remoteUser?.nome ??
+                        participantNames[
+                          socketId
+                        ] ??
+                        "Participante"}
+                    </span>
+
+                  </div>
+
+                ),
+
+                ];
 
               }
             )}
@@ -2302,119 +2683,71 @@ export default function VideoMeeting({
             "
           >
 
-            <button
+            <CallBarButton
+              icon="🎙️"
+              label="Microfone"
+              active={!micOn}
               onClick={toggleMic}
               title={
                 micOn
                   ? "Desligar microfone"
                   : "Ligar microfone"
               }
-              className={`
-                flex
-                items-center
-                gap-2
-                rounded-lg
-                px-3
-                py-2
-                text-sm
-                ${
-                  micOn
-                    ? "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
-                    : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                }
-              `}
-            >
-              🎙️ Microfone
-            </button>
+            />
 
-            <button
+            <CallBarButton
+              icon="📷"
+              label="Câmera"
+              active={!cameraOn}
               onClick={toggleCamera}
               title={
                 cameraOn
                   ? "Desligar câmera"
                   : "Ligar câmera"
               }
-              className={`
-                flex
-                items-center
-                gap-2
-                rounded-lg
-                px-3
-                py-2
-                text-sm
-                ${
-                  cameraOn
-                    ? "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
-                    : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-                }
-              `}
-            >
-              📷 Câmera
-            </button>
+            />
 
-            <button
+            <CallBarButton
+              icon="🖥️"
+              label="Compartilhar"
+              active={sharingScreen}
               onClick={toggleScreenShare}
               title={
                 sharingScreen
                   ? "Parar compartilhamento"
                   : "Compartilhar tela"
               }
-              className={`
-                flex
-                items-center
-                gap-2
-                rounded-lg
-                px-3
-                py-2
-                text-sm
-                ${
-                  sharingScreen
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                    : "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
-                }
-              `}
-            >
-              🖥️ Compartilhar
-            </button>
+            />
 
-            <button
+            {onOpenChat && (
+
+              <CallBarButton
+                icon="💬"
+                label="Chat"
+                onClick={onOpenChat}
+                title="Abrir o chat da sala"
+              />
+
+            )}
+
+            <CallBarButton
+              icon="⚙️"
               onClick={() =>
                 setShowDeviceSettings(
                   (current) => !current
                 )
               }
+              active={showDeviceSettings}
               title="Escolher dispositivos de áudio"
-              className={`
-                flex
-                items-center
-                gap-2
-                rounded-lg
-                px-3
-                py-2
-                text-sm
-                ${
-                  showDeviceSettings
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                    : "bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-200"
-                }
-              `}
-            >
-              ⚙️
-            </button>
+            />
 
-            <button
+            <CallBarButton
+              icon="📞"
+              label="Sair"
+              danger
               onClick={leaveMeeting}
-              className="
-                rounded-lg
-                bg-red-600
-                px-4
-                py-2
-                text-sm
-                text-white
-              "
-            >
-              Sair da Chamada
-            </button>
+              title="Sair da chamada"
+            />
 
           </div>
 

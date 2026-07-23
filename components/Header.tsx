@@ -87,9 +87,9 @@ export default function Header({
         <Image
           src="/logo.png"
           alt="Internit"
-          width={200}
-          height={70}
-          className="h-10 w-auto"
+          width={240}
+          height={84}
+          className="h-14 w-auto"
         />
       </div>
 

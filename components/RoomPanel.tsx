@@ -29,15 +29,67 @@ type Props = {
   messages: ChatMessage[];
   onSendMessage: (text: string) => void;
   onClearChat: () => void;
+  minimized: boolean;
+  onToggleMinimized: () => void;
 };
 
-const STATUS_COLOR: Record<string, string> = {
-  Disponivel: "bg-green-500",
-  Ausente: "bg-yellow-500",
-  Reuniao: "bg-red-500",
-  Almoco: "bg-orange-500",
-  Ocioso: "bg-slate-400",
-};
+function avatarInitials(nome: string) {
+  return nome
+    .split(" ")
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+}
+
+function MessageAvatar({
+  user,
+  fallbackNome,
+}: {
+  user?: User;
+  fallbackNome: string;
+}) {
+
+  const nome = user?.nome ?? fallbackNome;
+
+  return (
+    <div
+      className="
+        flex
+        h-8
+        w-8
+        shrink-0
+        items-center
+        justify-center
+        overflow-hidden
+        rounded-full
+        bg-blue-600
+        text-xs
+        font-bold
+        text-white
+      "
+    >
+
+      {user?.avatarTipo === "foto" &&
+      user.avatarValor ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={user.avatarValor}
+          alt={nome}
+          className="h-full w-full object-cover"
+        />
+      ) : user?.avatarTipo === "emoji" &&
+        user.avatarValor ? (
+        <span className="text-sm">
+          {user.avatarValor}
+        </span>
+      ) : (
+        avatarInitials(nome)
+      )}
+
+    </div>
+  );
+}
 
 export default function RoomPanel({
   room,
@@ -46,11 +98,9 @@ export default function RoomPanel({
   messages,
   onSendMessage,
   onClearChat,
+  minimized,
+  onToggleMinimized,
 }: Props) {
-
-  const [tab, setTab] = useState<
-    "participantes" | "chat"
-  >("participantes");
 
   const [draft, setDraft] =
     useState("");
@@ -58,19 +108,18 @@ export default function RoomPanel({
   const messagesEndRef =
     useRef<HTMLDivElement>(null);
 
-  const usersInRoom = users.filter(
-    (user) => user.room === room
-  );
-
-  // Sempre mostra as mensagens mais recentes sem precisar rolar —
-  // acompanha tanto mensagens novas quanto trocar pra aba do chat.
+  // Sempre mostra as mensagens mais recentes sem precisar rolar.
   useEffect(() => {
+
+    if (minimized) {
+      return;
+    }
 
     messagesEndRef.current?.scrollIntoView({
       block: "end",
     });
 
-  }, [messages, tab]);
+  }, [messages, minimized]);
 
   function handleSend(
     event: React.FormEvent
@@ -98,7 +147,6 @@ export default function RoomPanel({
   return (
     <div
       className="
-        mt-6
         rounded-2xl
         border
         bg-white
@@ -108,183 +156,50 @@ export default function RoomPanel({
       "
     >
 
-      <div className="flex border-b dark:border-white/10">
+      <button
+        onClick={onToggleMinimized}
+        className="
+          flex
+          w-full
+          items-center
+          justify-between
+          rounded-t-2xl
+          p-4
+          font-bold
+          text-slate-900
+          hover:bg-slate-50
+          dark:text-slate-100
+          dark:hover:bg-slate-800
+        "
+      >
+        <span>
+          💬 Chat
+          {room && ` · ${room}`}
+        </span>
 
-        <button
-          onClick={() =>
-            setTab("participantes")
-          }
-          className={`
-            flex-1
-            px-4
-            py-3
-            text-sm
-            font-medium
-            ${
-              tab === "participantes"
-                ? "border-b-2 border-blue-600 text-blue-700 dark:text-blue-400"
-                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            }
-          `}
-        >
-          Participantes ({usersInRoom.length})
-        </button>
-
-        <button
-          onClick={() => setTab("chat")}
-          className={`
-            flex-1
-            px-4
-            py-3
-            text-sm
-            font-medium
-            ${
-              tab === "chat"
-                ? "border-b-2 border-blue-600 text-blue-700 dark:text-blue-400"
-                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-            }
-          `}
-        >
-          Chat
-          {messages.length > 0 &&
-            ` (${messages.length})`}
-        </button>
-
-      </div>
-
-      {tab === "participantes" && (
-
-        <div
+        <span
           className="
-            max-h-72
-            overflow-y-auto
-            p-2
+            flex
+            h-5
+            w-5
+            items-center
+            justify-center
+            rounded-full
+            bg-slate-200
+            text-sm
+            leading-none
+            text-slate-600
+            dark:bg-slate-700
+            dark:text-slate-300
           "
         >
+          {minimized ? "+" : "−"}
+        </span>
+      </button>
 
-          {usersInRoom.length === 0 && (
+      {!minimized && (
 
-            <p
-              className="
-                p-3
-                text-sm
-                text-slate-500
-                dark:text-slate-400
-              "
-            >
-              Nenhum usuário presente.
-            </p>
-
-          )}
-
-          {usersInRoom.map((user) => {
-
-            const initials =
-              user.nome
-                .split(" ")
-                .slice(0, 2)
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase();
-
-            return (
-
-              <div
-                key={user.id}
-                className="
-                  flex
-                  items-center
-                  gap-3
-                  rounded-lg
-                  p-2
-                  hover:bg-slate-50
-                  dark:hover:bg-slate-700
-                "
-              >
-
-                <div
-                  className="
-                    relative
-                    flex
-                    h-9
-                    w-9
-                    shrink-0
-                    items-center
-                    justify-center
-                    overflow-hidden
-                    rounded-full
-                    bg-blue-600
-                    text-xs
-                    font-bold
-                    text-white
-                  "
-                >
-
-                  {user.avatarTipo === "foto" &&
-                  user.avatarValor ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={user.avatarValor}
-                      alt={user.nome}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : user.avatarTipo ===
-                      "emoji" &&
-                    user.avatarValor ? (
-                    <span className="text-base">
-                      {user.avatarValor}
-                    </span>
-                  ) : (
-                    initials
-                  )}
-
-                  <span
-                    className={`
-                      absolute
-                      -bottom-0.5
-                      -right-0.5
-                      h-2.5
-                      w-2.5
-                      rounded-full
-                      border-2
-                      border-white
-                      dark:border-slate-800
-                      ${
-                        STATUS_COLOR[
-                          user.status ?? ""
-                        ] ?? "bg-slate-300"
-                      }
-                    `}
-                  />
-
-                </div>
-
-                <span
-                  className="
-                    truncate
-                    text-sm
-                    text-slate-700
-                    dark:text-slate-300
-                  "
-                >
-                  {user.nome}
-                  {user.id === currentUserId &&
-                    " (Você)"}
-                </span>
-
-              </div>
-
-            );
-
-          })}
-
-        </div>
-
-      )}
-
-      {tab === "chat" && (
-
-        <div className="flex h-96 flex-col">
+        <div className="flex h-96 flex-col border-t dark:border-white/10">
 
           <div
             className="
@@ -306,29 +221,46 @@ export default function RoomPanel({
 
             {messages.map((msg, index) => (
 
-              <div key={index} className="text-sm">
+              <div
+                key={index}
+                className="flex items-start gap-2 text-sm"
+              >
 
-                <span className="font-semibold text-slate-800 dark:text-slate-100">
-                  {msg.fromId === currentUserId
-                    ? "Você"
-                    : msg.fromNome}
-                </span>
-
-                <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
-                  {new Date(
-                    msg.at
-                  ).toLocaleTimeString(
-                    "pt-BR",
-                    {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    }
+                <MessageAvatar
+                  user={users.find(
+                    (user) =>
+                      user.id === msg.fromId
                   )}
-                </span>
+                  fallbackNome={msg.fromNome}
+                />
 
-                <p className="text-slate-600 dark:text-slate-300">
-                  {msg.message}
-                </p>
+                <div className="min-w-0 flex-1">
+
+                  <div>
+                    <span className="font-semibold text-slate-800 dark:text-slate-100">
+                      {msg.fromId === currentUserId
+                        ? "Você"
+                        : msg.fromNome}
+                    </span>
+
+                    <span className="ml-2 text-xs text-slate-400 dark:text-slate-500">
+                      {new Date(
+                        msg.at
+                      ).toLocaleTimeString(
+                        "pt-BR",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }
+                      )}
+                    </span>
+                  </div>
+
+                  <p className="break-words text-slate-600 dark:text-slate-300">
+                    {msg.message}
+                  </p>
+
+                </div>
 
               </div>
 

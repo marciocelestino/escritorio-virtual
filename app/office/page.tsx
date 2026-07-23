@@ -17,10 +17,7 @@ import { getSessionUser, getSessionToken } from "@/lib/session";
 import { useMounted } from "@/lib/useMounted";
 import OfficeMap from "@/components/OfficeMap";
 import VideoMeeting from "@/components/VideoMeeting";
-import {
-  roomSupportsCall,
-  buildRoomList,
-} from "@/lib/rooms";
+import { roomSupportsCall } from "@/lib/rooms";
 import { playPingSound } from "@/lib/sound";
 
 type StatusValue =
@@ -166,6 +163,47 @@ export default function OfficePage() {
     );
 
   }, [usuariosColapsados]);
+
+  // Minimiza só o corpo do chat, mantendo o cabeçalho da seção visível
+  // (mesma ideia do minimizar de Usuários, mas independente).
+  const [chatMinimizado, setChatMinimizado] =
+    useState(() =>
+      typeof window !== "undefined" &&
+      localStorage.getItem(
+        "chatMinimizado"
+      ) === "true"
+    );
+
+  useEffect(() => {
+
+    localStorage.setItem(
+      "chatMinimizado",
+      String(chatMinimizado)
+    );
+
+  }, [chatMinimizado]);
+
+  // Fecha a barra lateral inteira (Chat + Usuários Online), devolvendo
+  // toda a largura pro mapa — diferente de minimizar cada seção por
+  // dentro, isso esconde a coluna toda.
+  const [
+    barraLateralFechada,
+    setBarraLateralFechada,
+  ] = useState(() =>
+    typeof window !== "undefined" &&
+    localStorage.getItem(
+      "barraLateralFechada"
+    ) === "true"
+  );
+
+  useEffect(() => {
+
+    localStorage.setItem(
+      "barraLateralFechada",
+      String(barraLateralFechada)
+    );
+
+  }, [barraLateralFechada]);
 
   // Guarda o estado de presença mais recente pra poder reanunciar ao
   // servidor sempre que o socket reconectar (ex.: depois de uma queda de
@@ -679,17 +717,6 @@ setCurrentUserId(
     (user) => user.id === currentUserId
   );
 
-  const allRoomNames = buildRoomList(
-    allUsers
-  ).map((room) => room.nome);
-
-  const roomsLivres = allRoomNames.filter(
-    (roomName) =>
-      !onlineUsers.some(
-        (user) => user.room === roomName
-      )
-  ).length;
-
   const viewingDifferentRoom = Boolean(
     callRoom !== null &&
       callRoom !== currentRoom
@@ -779,40 +806,10 @@ setCurrentUserId(
               mb-6
               flex
               items-center
-              justify-between
+              justify-end
               gap-4
             "
           >
-
-            <div>
-
-              <h2
-                className="
-                  text-4xl
-                  font-bold
-                  text-slate-900
-                  dark:text-slate-100
-                "
-              >
-                Escritório Internit
-              </h2>
-
-              <p
-                className="
-                  mt-2
-                  text-xl
-                  text-slate-600
-                  dark:text-slate-400
-                "
-              >
-                {roomsLivres} salas livres
-                {" · "}
-                {onlineUsers.length}
-                {" "}
-                pessoas online
-              </p>
-
-            </div>
 
             <div
               className="
@@ -864,6 +861,37 @@ setCurrentUserId(
                   : "🚪 Portas fechadas"}
               </button>
 
+              <button
+                onClick={() =>
+                  setBarraLateralFechada(
+                    (current) => !current
+                  )
+                }
+                title={
+                  barraLateralFechada
+                    ? "Mostrar barra lateral"
+                    : "Fechar barra lateral"
+                }
+                className="
+                  rounded-lg
+                  border
+                  border-slate-300
+                  px-3
+                  py-2
+                  text-sm
+                  font-medium
+                  text-slate-600
+                  hover:bg-slate-100
+                  dark:border-slate-600
+                  dark:text-slate-300
+                  dark:hover:bg-slate-800
+                "
+              >
+                {barraLateralFechada
+                  ? "»"
+                  : "«"}
+              </button>
+
             </div>
 
           </div>
@@ -893,31 +921,41 @@ setCurrentUserId(
         </section>
 
         <aside
-          className="
+          className={`
             relative
             z-50
             flex
-            w-80
             shrink-0
             flex-col
-            border-l
+            overflow-hidden
             bg-white
-            dark:border-white/10
+            transition-all
             dark:bg-slate-900
-          "
+            ${
+              barraLateralFechada
+                ? "w-0"
+                : "w-80 border-l dark:border-white/10"
+            }
+          `}
         >
 
           <div className="shrink-0 overflow-y-auto p-4">
 
             <RoomPanel
               room={currentRoom}
-              users={onlineUsers}
+              users={allUsers}
               currentUserId={currentUserId}
               messages={
                 chatMessages[currentRoom] ?? []
               }
               onSendMessage={sendChatMessage}
               onClearChat={clearChat}
+              minimized={chatMinimizado}
+              onToggleMinimized={() =>
+                setChatMinimizado(
+                  (current) => !current
+                )
+              }
             />
 
           </div>
@@ -946,10 +984,25 @@ setCurrentUserId(
                 dark:hover:bg-slate-800
               "
             >
-              Usuários ({onlineUsers.length})
+              Usuários Online ({onlineUsers.length})
 
-              <span className="text-slate-400 dark:text-slate-500">
-                {usuariosColapsados ? "▸" : "▾"}
+              <span
+                className="
+                  flex
+                  h-5
+                  w-5
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-slate-200
+                  text-sm
+                  leading-none
+                  text-slate-600
+                  dark:bg-slate-700
+                  dark:text-slate-300
+                "
+              >
+                {usuariosColapsados ? "+" : "−"}
               </span>
             </button>
 
@@ -1018,6 +1071,13 @@ setCurrentUserId(
             if (callRoom) {
               moveToRoom(callRoom);
             }
+          }}
+          sidebarWidthPx={
+            barraLateralFechada ? 0 : 320
+          }
+          onOpenChat={() => {
+            setBarraLateralFechada(false);
+            setChatMinimizado(false);
           }}
         />
 
