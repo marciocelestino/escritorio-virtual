@@ -77,6 +77,7 @@ export default function Header({
         items-center
         justify-between
         border-b
+        border-white/10
         bg-slate-950
         px-6
         py-4

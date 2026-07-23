@@ -4,19 +4,18 @@ type Props = {
   isCurrentUser: boolean;
   avatarTipo?: string | null;
   avatarValor?: string | null;
-  x: number;
-  y: number;
   onClick: () => void;
 };
 
+// Item de uma grade de assentos (CSS grid, não posicionamento absoluto em
+// px) — assim a sala encolhe/cresce de verdade com a largura disponível,
+// em vez de precisar de rolagem horizontal em telas menores.
 export default function PositionedAvatar({
   nome,
   status = "Disponivel",
   isCurrentUser = false,
   avatarTipo,
   avatarValor,
-  x,
-  y,
   onClick,
 }: Props) {
 
@@ -38,17 +37,13 @@ export default function PositionedAvatar({
 
   return (
     <div
-  onClick={onClick}
-      className="cursor-pointer
-        absolute
+      onClick={onClick}
+      className="
         flex
+        cursor-pointer
         flex-col
         items-center
       "
-      style={{
-        left: `${x}px`,
-        top: `${y}px`,
-      }}
     >
 
       <div className="relative">

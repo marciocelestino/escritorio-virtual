@@ -797,13 +797,13 @@ setCurrentUserId(
           className="
             flex-1
             overflow-y-auto
-            p-8
+            p-5
           "
         >
 
           <div
             className="
-              mb-6
+              mb-4
               flex
               items-center
               justify-end
@@ -896,7 +896,7 @@ setCurrentUserId(
 
           </div>
 
-          <div className="mb-8">
+          <div className="mb-4">
 
             <OfficeMap
               users={allUsers}
@@ -984,7 +984,7 @@ setCurrentUserId(
                 dark:hover:bg-slate-800
               "
             >
-              Usuários Online ({onlineUsers.length})
+              Online ({onlineUsers.length})
 
               <span
                 className="

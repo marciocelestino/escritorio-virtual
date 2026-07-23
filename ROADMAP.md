@@ -163,6 +163,21 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
 - **Recepção e Espaço Natureza maiores**: mesma altura da Sala de
   Reunião (280px) e 10 assentos (2 fileiras de 5) no lugar dos 4
   antigos.
+- **Assentos viram grade responsiva de verdade**: os lugares de cada
+  sala eram posicionados em pixels fixos (x/y absolutos), o que forçava
+  rolagem horizontal dentro do card em telas menores. Agora usam CSS
+  Grid fluido — a sala encolhe/cresce com a largura disponível, sem
+  scrollbar interna.
+- **Ajustes finos de acabamento**: seção "Usuários Online" da lateral
+  virou só "Online"; a linha clara abaixo do cabeçalho ficou escura
+  (mesmo tom translúcido dos cards); nome das salas ~30% menor;
+  espaçamentos gerais mais enxutos pra aproveitar melhor a altura da
+  tela (menos rolagem vertical, especialmente em Full HD).
+- **Mapa só mostra a sala inteira de quem está online**: quem está
+  offline vira só uma marcação pequena (avatar meio apagado + nome),
+  sem abrir a sala toda — assim dá pra ver quem existe no sistema e
+  quem está offline sem inflar o mapa com salas vazias. Ao a pessoa
+  conectar, a sala dela aparece por inteiro pra todo mundo.
 
 ## Ainda por fazer
 

@@ -25,6 +25,9 @@ type Props = {
   onSeatClick: (seat: number) => void;
 };
 
+// 10 lugares (2 fileiras de 5), mesma altura da Sala de Reunião.
+const SEAT_COUNT = 10;
+
 export default function NatureRoom({
   users,
   currentUserId,
@@ -32,20 +35,9 @@ export default function NatureRoom({
   onSeatClick,
 }: Props) {
 
-  // 2 fileiras de 5 lugares (10 ao todo), mesma altura da Sala de Reunião.
-  const columns = [20, 120, 220, 320, 420];
-
-  const positions = [
-    ...columns.map((x) => ({ x, y: 46 })),
-    ...columns.map((x) => ({ x, y: 160 })),
-  ];
-
   return (
     <div
       className="
-        relative
-        h-[280px]
-        overflow-x-auto
         rounded-2xl
         border
         bg-green-50
@@ -56,11 +48,11 @@ export default function NatureRoom({
     >
       <h3
         className="
-          mb-2
+          mb-3
           flex
           items-center
           gap-2
-          text-sm
+          text-[10px]
           font-semibold
           text-slate-900
           dark:text-slate-100
@@ -75,46 +67,64 @@ export default function NatureRoom({
         Espaço Natureza
       </h3>
 
-      {positions.map((pos, seatIndex) => {
+      <div
+        className="
+          grid
+          grid-cols-5
+          gap-x-2
+          gap-y-4
+        "
+      >
 
-        const occupant = users.find(
-          (user) => user.seat === seatIndex
-        );
+        {Array.from(
+          { length: SEAT_COUNT },
+          (_, seatIndex) => {
 
-        if (occupant) {
-          return (
-            <PositionedAvatar
-              key={seatIndex}
-              nome={occupant.nome}
-              status={occupant.status}
-              isCurrentUser={
-                occupant.id === currentUserId
-              }
-              avatarTipo={occupant.avatarTipo}
-              avatarValor={occupant.avatarValor}
-              x={pos.x}
-              y={pos.y}
-              onClick={() =>
-                onUserClick(
-                  occupant.id,
-                  occupant.nome
-                )
-              }
-            />
-          );
-        }
+            const occupant = users.find(
+              (user) =>
+                user.seat === seatIndex
+            );
 
-        return (
-          <EmptySeatMarker
-            key={seatIndex}
-            x={pos.x}
-            y={pos.y}
-            onClick={() =>
-              onSeatClick(seatIndex)
+            if (occupant) {
+              return (
+                <PositionedAvatar
+                  key={seatIndex}
+                  nome={occupant.nome}
+                  status={occupant.status}
+                  isCurrentUser={
+                    occupant.id ===
+                    currentUserId
+                  }
+                  avatarTipo={
+                    occupant.avatarTipo
+                  }
+                  avatarValor={
+                    occupant.avatarValor
+                  }
+                  onClick={() =>
+                    onUserClick(
+                      occupant.id,
+                      occupant.nome
+                    )
+                  }
+                />
+              );
             }
-          />
-        );
-      })}
+
+            return (
+              <EmptySeatMarker
+                key={seatIndex}
+                onClick={() =>
+                  onSeatClick(seatIndex)
+                }
+              />
+            );
+
+          }
+        )}
+
+      </div>
+
     </div>
   );
 }

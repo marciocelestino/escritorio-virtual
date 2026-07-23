@@ -28,6 +28,9 @@ type Props = {
   onSeatClick: (seat: number) => void;
 };
 
+// 6 lugares (2 fileiras de 3).
+const SEAT_COUNT = 6;
+
 export default function UserOfficeRoom({
   room,
   users,
@@ -39,18 +42,9 @@ export default function UserOfficeRoom({
   onSeatClick,
 }: Props) {
 
-  const columns = [20, 120, 220];
-
-  const positions = [
-    ...columns.map((x) => ({ x, y: 46 })),
-    ...columns.map((x) => ({ x, y: 118 })),
-  ];
-
   return (
     <div
       className="
-        relative
-        h-[210px]
         rounded-2xl
         border
         bg-white
@@ -62,11 +56,11 @@ export default function UserOfficeRoom({
 
       <h3
         className="
-          mb-2
+          mb-3
           flex
           items-center
           gap-2
-          text-sm
+          text-[10px]
           font-semibold
           text-slate-900
           dark:text-slate-100
@@ -80,46 +74,63 @@ export default function UserOfficeRoom({
         {room}
       </h3>
 
-      {positions.map((pos, seatIndex) => {
+      <div
+        className="
+          grid
+          grid-cols-3
+          gap-x-2
+          gap-y-4
+        "
+      >
 
-        const occupant = users.find(
-          (user) => user.seat === seatIndex
-        );
+        {Array.from(
+          { length: SEAT_COUNT },
+          (_, seatIndex) => {
 
-        if (occupant) {
-          return (
-            <PositionedAvatar
-              key={seatIndex}
-              nome={occupant.nome}
-              status={occupant.status}
-              isCurrentUser={
-                occupant.id === currentUserId
-              }
-              avatarTipo={occupant.avatarTipo}
-              avatarValor={occupant.avatarValor}
-              x={pos.x}
-              y={pos.y}
-              onClick={() =>
-                onUserClick(
-                  occupant.id,
-                  occupant.nome
-                )
-              }
-            />
-          );
-        }
+            const occupant = users.find(
+              (user) =>
+                user.seat === seatIndex
+            );
 
-        return (
-          <EmptySeatMarker
-            key={seatIndex}
-            x={pos.x}
-            y={pos.y}
-            onClick={() =>
-              onSeatClick(seatIndex)
+            if (occupant) {
+              return (
+                <PositionedAvatar
+                  key={seatIndex}
+                  nome={occupant.nome}
+                  status={occupant.status}
+                  isCurrentUser={
+                    occupant.id ===
+                    currentUserId
+                  }
+                  avatarTipo={
+                    occupant.avatarTipo
+                  }
+                  avatarValor={
+                    occupant.avatarValor
+                  }
+                  onClick={() =>
+                    onUserClick(
+                      occupant.id,
+                      occupant.nome
+                    )
+                  }
+                />
+              );
             }
-          />
-        );
-      })}
+
+            return (
+              <EmptySeatMarker
+                key={seatIndex}
+                onClick={() =>
+                  onSeatClick(seatIndex)
+                }
+              />
+            );
+
+          }
+        )}
+
+      </div>
 
     </div>
   );

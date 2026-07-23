@@ -97,16 +97,13 @@ export const ROOM_BADGE_COLORS = {
     "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
 };
 
-// Lugar vazio e clicável — clicar senta o usuário atual ali. Mantém o
-// mesmo formato de posicionamento (x/y absolutos) do PositionedAvatar
-// pra poder trocar um pelo outro sem mexer no layout da sala.
+// Lugar vazio e clicável — clicar senta o usuário atual ali. Item de uma
+// grade de assentos (CSS grid), não posicionamento absoluto, pra sala
+// encolher/crescer com a largura disponível em vez de precisar de
+// rolagem horizontal.
 export function EmptySeatMarker({
-  x,
-  y,
   onClick,
 }: {
-  x: number;
-  y: number;
   onClick: () => void;
 }) {
   return (
@@ -114,7 +111,7 @@ export function EmptySeatMarker({
       onClick={onClick}
       title="Sentar aqui"
       className="
-        absolute
+        mx-auto
         flex
         h-12
         w-12
@@ -134,10 +131,6 @@ export function EmptySeatMarker({
         dark:hover:border-blue-400
         dark:hover:text-blue-400
       "
-      style={{
-        left: `${x}px`,
-        top: `${y}px`,
-      }}
     >
       +
     </button>
