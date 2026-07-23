@@ -922,6 +922,8 @@ useEffect(() => {
                 webapp instalável (PWA),
                 chat de texto,
                 modo escuro,
+                central de notificações,
+                busca global,
                 gravação de reuniões,
                 cargos e salas restritas por equipe,
                 plano de fundo da câmera,

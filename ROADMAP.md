@@ -52,8 +52,27 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   expandir, abre um painel grande com grade responsiva (1 a 5 colunas
   conforme o número de participantes) em vez da antiga lista vertical
   de 1 coluna, que virava um scroll enorme com muita gente na chamada.
+- **Barra de chamada nova**: virou uma barra fixa no rodapé da tela, com
+  fita horizontal de miniaturas (a sua e a de cada participante) e os
+  controles (microfone, câmera, compartilhar, dispositivos de áudio,
+  sair) sempre visíveis — troca a pastilha/painel expansível anterior.
+  Mutar/remover participante agora aparece ao passar o mouse sobre a
+  miniatura da pessoa.
 
 ## Ainda por fazer
+
+### Redesenho visual (em andamento, por fases)
+
+- **Modo escuro de propósito**: toggle salvo no perfil/`localStorage`,
+  usando as variantes `dark:` do Tailwind — item grande porque toca
+  praticamente todo componente da interface.
+- **Painel de Participantes + Chat de texto unificado**: juntar a lista
+  "Nesta sala" com um chat de texto por sala (sem @menção/histórico
+  persistente por enquanto — isso fica pra uma segunda leva do chat).
+- **Central de notificações e busca global (Ctrl+K)**: recursos novos,
+  não existem hoje.
+
+### Controles de chamada
 
 ### Controles de chamada
 
