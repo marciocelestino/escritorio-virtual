@@ -23,6 +23,13 @@ type IceCandidatePayload = {
   candidate: RTCIceCandidateInit;
 };
 
+type RosterUser = {
+  id: number;
+  nome: string;
+  avatarTipo?: string | null;
+  avatarValor?: string | null;
+};
+
 type Props = {
   room: string;
   autoJoin?: boolean;
@@ -34,6 +41,7 @@ type Props = {
   myAvatarValor?: string | null;
   viewingDifferentRoom?: boolean;
   onGoToCallRoom?: () => void;
+  roster?: RosterUser[];
 };
 
 const ICE_SERVERS = [
@@ -284,6 +292,7 @@ export default function VideoMeeting({
   myAvatarValor,
   viewingDifferentRoom = false,
   onGoToCallRoom,
+  roster,
 }: Props) {
 
   const localStreamRef =
@@ -380,8 +389,26 @@ export default function VideoMeeting({
   >({});
 
   const [
+    participantUserIds,
+    setParticipantUserIds,
+  ] = useState<
+    Record<string, number>
+  >({});
+
+  const [
     remoteMicOff,
     setRemoteMicOff,
+  ] = useState<
+    Record<string, boolean>
+  >({});
+
+  // Câmera desligada (ou nunca ligada — ex.: entrou só com áudio) de cada
+  // participante remoto. Sem isso, o vídeo remoto continuava mostrando o
+  // último quadro recebido (congelado) ou uma tela em branco quando a
+  // pessoa não tinha faixa de vídeo nenhuma.
+  const [
+    remoteCameraOff,
+    setRemoteCameraOff,
   ] = useState<
     Record<string, boolean>
   >({});
@@ -438,7 +465,19 @@ export default function VideoMeeting({
       return next;
     });
 
+    setParticipantUserIds((prev) => {
+      const next = { ...prev };
+      delete next[remoteSocketId];
+      return next;
+    });
+
     setRemoteMicOff((prev) => {
+      const next = { ...prev };
+      delete next[remoteSocketId];
+      return next;
+    });
+
+    setRemoteCameraOff((prev) => {
       const next = { ...prev };
       delete next[remoteSocketId];
       return next;
@@ -560,6 +599,37 @@ export default function VideoMeeting({
         [remoteSocketId]:
           event.streams[0],
       }));
+
+      // A câmera desligar/ligar depois de conectado não dispara um novo
+      // "ontrack" (o remetente só troca a faixa com replaceTrack) — quem
+      // recebe percebe isso pelo próprio evento de mute/unmute da faixa de
+      // vídeo. Sem isso, o lado remoto ficava com o último quadro
+      // recebido "congelado" em vez de trocar pro avatar.
+      if (event.track.kind === "video") {
+
+        const videoTrack = event.track;
+
+        setRemoteCameraOff((prev) => ({
+          ...prev,
+          [remoteSocketId]:
+            videoTrack.muted,
+        }));
+
+        videoTrack.onmute = () => {
+          setRemoteCameraOff((prev) => ({
+            ...prev,
+            [remoteSocketId]: true,
+          }));
+        };
+
+        videoTrack.onunmute = () => {
+          setRemoteCameraOff((prev) => ({
+            ...prev,
+            [remoteSocketId]: false,
+          }));
+        };
+
+      }
 
     };
 
@@ -1518,6 +1588,7 @@ export default function VideoMeeting({
       async (
         participants: Array<{
           socketId: string;
+          userId?: number;
           nome?: string;
         }>
       ) => {
@@ -1530,6 +1601,24 @@ export default function VideoMeeting({
             ({ socketId, nome }) => {
               if (nome) {
                 next[socketId] = nome;
+              }
+            }
+          );
+
+          return next;
+
+        });
+
+        setParticipantUserIds((prev) => {
+
+          const next = { ...prev };
+
+          participants.forEach(
+            ({ socketId, userId }) => {
+              if (
+                typeof userId === "number"
+              ) {
+                next[socketId] = userId;
               }
             }
           );
@@ -1583,9 +1672,11 @@ export default function VideoMeeting({
       "user-joined-meeting",
       ({
         socketId,
+        userId,
         nome,
       }: {
         socketId: string;
+        userId?: number;
         nome?: string;
       }) => {
 
@@ -1593,6 +1684,13 @@ export default function VideoMeeting({
           setParticipantNames((prev) => ({
             ...prev,
             [socketId]: nome,
+          }));
+        }
+
+        if (typeof userId === "number") {
+          setParticipantUserIds((prev) => ({
+            ...prev,
+            [socketId]: userId,
           }));
         }
 
@@ -1768,6 +1866,21 @@ export default function VideoMeeting({
       : expandedId
       ? remoteStreams[expandedId]
       : null;
+
+  const expandedRosterUser =
+    expandedId && expandedId !== "local"
+      ? roster?.find(
+          (user) =>
+            user.id ===
+            participantUserIds[expandedId]
+        )
+      : undefined;
+
+  const expandedCameraOff =
+    expandedId === "local"
+      ? !cameraOn
+      : expandedId !== null &&
+        remoteCameraOff[expandedId] !== false;
 
   const participantCount =
     (joined ? 1 : 0) +
@@ -1954,7 +2067,20 @@ export default function VideoMeeting({
             </div>
 
             {remoteEntries.map(
-              ([socketId, remoteStream]) => (
+              ([socketId, remoteStream]) => {
+
+                const remoteUser = roster?.find(
+                  (user) =>
+                    user.id ===
+                    participantUserIds[socketId]
+                );
+
+                const cameraIsOff =
+                  remoteCameraOff[
+                    socketId
+                  ] !== false;
+
+                return (
 
                 <div
                   key={socketId}
@@ -1967,27 +2093,54 @@ export default function VideoMeeting({
                   "
                 >
 
-                  <VideoTile
-                    stream={remoteStream}
-                    small
-                    speaking={speakingIds.has(
-                      socketId
-                    )}
-                    micMuted={
-                      remoteMicOff[
+                  {cameraIsOff ? (
+
+                    <CameraOffAvatar
+                      nome={
+                        remoteUser?.nome ??
+                        participantNames[
+                          socketId
+                        ]
+                      }
+                      avatarTipo={
+                        remoteUser?.avatarTipo
+                      }
+                      avatarValor={
+                        remoteUser?.avatarValor
+                      }
+                      micMuted={
+                        remoteMicOff[
+                          socketId
+                        ] === true
+                      }
+                      small
+                    />
+
+                  ) : (
+
+                    <VideoTile
+                      stream={remoteStream}
+                      small
+                      speaking={speakingIds.has(
                         socketId
-                      ] === true
-                    }
-                    sinkId={
-                      selectedSpeakerId ||
-                      undefined
-                    }
-                    onClick={() =>
-                      toggleExpanded(
-                        socketId
-                      )
-                    }
-                  />
+                      )}
+                      micMuted={
+                        remoteMicOff[
+                          socketId
+                        ] === true
+                      }
+                      sinkId={
+                        selectedSpeakerId ||
+                        undefined
+                      }
+                      onClick={() =>
+                        toggleExpanded(
+                          socketId
+                        )
+                      }
+                    />
+
+                  )}
 
                   <div
                     className="
@@ -2056,14 +2209,18 @@ export default function VideoMeeting({
                       text-slate-500
                     "
                   >
-                    {participantNames[
-                      socketId
-                    ] ?? "Participante"}
+                    {remoteUser?.nome ??
+                      participantNames[
+                        socketId
+                      ] ??
+                      "Participante"}
                   </span>
 
                 </div>
 
-              )
+                );
+
+              }
             )}
 
           </div>
@@ -2332,33 +2489,69 @@ export default function VideoMeeting({
           className="w-full max-w-3xl"
         >
 
-          <VideoTile
-            stream={expandedStream}
-            muted={expandedId === "local"}
-            large
-            speaking={
-              expandedId
-                ? speakingIds.has(
-                    expandedId
-                  )
-                : false
-            }
-            micMuted={
-              expandedId === "local"
-                ? !micOn
-                : expandedId !== null &&
-                  remoteMicOff[expandedId] === true
-            }
-            sinkId={
-              selectedSpeakerId || undefined
-            }
-            onClick={() =>
-              setExpandedId(null)
-            }
-            onElement={(el) => {
-              expandedVideoRef.current = el;
-            }}
-          />
+          {expandedCameraOff ? (
+
+            <CameraOffAvatar
+              nome={
+                expandedId === "local"
+                  ? myNome
+                  : expandedRosterUser?.nome ??
+                    (expandedId
+                      ? participantNames[
+                          expandedId
+                        ]
+                      : undefined)
+              }
+              avatarTipo={
+                expandedId === "local"
+                  ? myAvatarTipo
+                  : expandedRosterUser?.avatarTipo
+              }
+              avatarValor={
+                expandedId === "local"
+                  ? myAvatarValor
+                  : expandedRosterUser?.avatarValor
+              }
+              micMuted={
+                expandedId === "local"
+                  ? !micOn
+                  : expandedId !== null &&
+                    remoteMicOff[expandedId] ===
+                      true
+              }
+            />
+
+          ) : (
+
+            <VideoTile
+              stream={expandedStream}
+              muted={expandedId === "local"}
+              large
+              speaking={
+                expandedId
+                  ? speakingIds.has(
+                      expandedId
+                    )
+                  : false
+              }
+              micMuted={
+                expandedId === "local"
+                  ? !micOn
+                  : expandedId !== null &&
+                    remoteMicOff[expandedId] === true
+              }
+              sinkId={
+                selectedSpeakerId || undefined
+              }
+              onClick={() =>
+                setExpandedId(null)
+              }
+              onElement={(el) => {
+                expandedVideoRef.current = el;
+              }}
+            />
+
+          )}
 
           <div className="mt-3 flex justify-center gap-4">
 

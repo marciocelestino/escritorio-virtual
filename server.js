@@ -384,6 +384,7 @@ app.prepare().then(() => {
       const existingParticipants = existingRoom
         ? Array.from(existingRoom).map((socketId) => ({
             socketId,
+            userId: getUserBySocketId(socketId)?.id,
             nome: getUserBySocketId(socketId)?.nome,
           }))
         : [];
@@ -400,6 +401,7 @@ app.prepare().then(() => {
 
       socket.to(callKey).emit("user-joined-meeting", {
         socketId: socket.id,
+        userId: joiner?.id,
         nome: joiner?.nome,
       });
 

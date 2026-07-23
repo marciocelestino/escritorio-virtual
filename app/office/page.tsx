@@ -1163,6 +1163,7 @@ useEffect(() => {
           myNome={myself?.nome}
           myAvatarTipo={myself?.avatarTipo}
           myAvatarValor={myself?.avatarValor}
+          roster={allUsers}
           viewingDifferentRoom={
             viewingDifferentRoom
           }
