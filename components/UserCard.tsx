@@ -1,15 +1,15 @@
 type Props = {
   nome: string;
   status?: string;
-  room?: string;
   onInvite?: () => void;
+  onOpenDm?: () => void;
 };
 
 export default function UserCard({
   nome,
   status,
-  room,
   onInvite,
+  onOpenDm,
 }: Props) {
   const getStatusIcon = () => {
     switch (status) {
@@ -59,43 +59,62 @@ export default function UserCard({
       "
     >
       <div>
-        <div className="font-medium dark:text-slate-100">
+        <div className="text-xs font-medium dark:text-slate-100">
           {nome}
         </div>
 
-        <div className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+        <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
           {getStatusIcon()} {getStatusLabel()}
-          {room && (
-            <span className="text-slate-400 dark:text-slate-500">
-              {" "}
-              · {room}
-            </span>
-          )}
         </div>
       </div>
 
-      {onInvite && (
-        <button
-          onClick={onInvite}
-          title={`Chamar ${nome} para esta sala`}
-          className="
-            shrink-0
-            rounded-lg
-            border
-            border-slate-300
-            bg-white
-            px-2
-            py-1
-            text-xs
-            font-medium
-            text-slate-900
-            transition
-            hover:bg-slate-50
-          "
-        >
-          Chamar
-        </button>
-      )}
+      <div className="flex shrink-0 items-center gap-1">
+
+        {onOpenDm && (
+          <button
+            onClick={onOpenDm}
+            title={`Mensagem direta para ${nome}`}
+            className="
+              rounded-lg
+              border
+              border-slate-300
+              bg-white
+              px-2
+              py-1
+              text-xs
+              font-medium
+              text-slate-900
+              transition
+              hover:bg-slate-50
+            "
+          >
+            💬
+          </button>
+        )}
+
+        {onInvite && (
+          <button
+            onClick={onInvite}
+            title={`Chamar ${nome} para esta sala`}
+            className="
+              rounded-lg
+              border
+              border-slate-300
+              bg-white
+              px-2
+              py-1
+              text-xs
+              font-medium
+              text-slate-900
+              transition
+              hover:bg-slate-50
+            "
+          >
+            Chamar
+          </button>
+        )}
+
+      </div>
     </div>
   );
 }

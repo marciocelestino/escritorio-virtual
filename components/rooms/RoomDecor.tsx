@@ -87,12 +87,8 @@ export function OwnerAvatarBadge({
 }
 
 export const ROOM_BADGE_COLORS = {
-  recepcao:
-    "bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300",
   reuniao:
     "bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300",
-  natureza:
-    "bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-300",
   pessoal:
     "bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-300",
 };
@@ -101,16 +97,23 @@ export const ROOM_BADGE_COLORS = {
 // grade de assentos (CSS grid), não posicionamento absoluto, pra sala
 // encolher/crescer com a largura disponível em vez de precisar de
 // rolagem horizontal.
+//
+// O Espaço Natureza tem fundo verde escuro sempre (não muda com o tema
+// claro/escuro do resto do app), então usa a variante "nature": um verde
+// bem mais claro, pensado pra contrastar nesse fundo — as outras salas
+// usam a variante padrão (cinza/azul, sensível ao tema).
 export function EmptySeatMarker({
   onClick,
+  variant = "default",
 }: {
   onClick: () => void;
+  variant?: "default" | "nature";
 }) {
   return (
     <button
       onClick={onClick}
       title="Sentar aqui"
-      className="
+      className={`
         mx-auto
         flex
         h-10
@@ -120,17 +123,14 @@ export function EmptySeatMarker({
         rounded-full
         border-2
         border-dashed
-        border-slate-300
         text-base
-        text-slate-300
         transition
-        hover:border-blue-400
-        hover:text-blue-400
-        dark:border-slate-600
-        dark:text-slate-600
-        dark:hover:border-blue-400
-        dark:hover:text-blue-400
-      "
+        ${
+          variant === "nature"
+            ? "border-emerald-300/50 text-emerald-300/70 hover:border-emerald-200 hover:text-emerald-200"
+            : "border-slate-300 text-slate-300 hover:border-blue-400 hover:text-blue-400 dark:border-slate-600 dark:text-slate-600 dark:hover:border-blue-400 dark:hover:text-blue-400"
+        }
+      `}
     >
       +
     </button>

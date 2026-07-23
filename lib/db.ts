@@ -199,7 +199,7 @@ export function createUser(user: {
     email: user.email,
     senhaHash: user.senhaHash,
     status: "Disponivel",
-    room: user.room ?? "Recepção",
+    room: user.room ?? "Espaço Natureza",
     salaNome: null,
     avatarTipo: null,
     avatarValor: null,

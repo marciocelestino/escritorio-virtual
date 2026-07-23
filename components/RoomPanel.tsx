@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import MentionInput from "./MentionInput";
 
 type User = {
   id: number;
@@ -16,6 +17,7 @@ type User = {
 };
 
 export type ChatMessage = {
+  id: string;
   fromId: number;
   fromNome: string;
   message: string;
@@ -121,11 +123,7 @@ export default function RoomPanel({
 
   }, [messages, minimized]);
 
-  function handleSend(
-    event: React.FormEvent
-  ) {
-
-    event.preventDefault();
+  function handleSend() {
 
     const trimmed = draft.trim();
 
@@ -219,10 +217,10 @@ export default function RoomPanel({
 
             )}
 
-            {messages.map((msg, index) => (
+            {messages.map((msg) => (
 
               <div
-                key={index}
+                key={msg.id}
                 className="flex items-start gap-2 text-sm"
               >
 
@@ -271,7 +269,10 @@ export default function RoomPanel({
           </div>
 
           <form
-            onSubmit={handleSend}
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSend();
+            }}
             className="
               flex
               gap-2
@@ -281,28 +282,13 @@ export default function RoomPanel({
             "
           >
 
-            <input
+            <MentionInput
               value={draft}
-              onChange={(e) =>
-                setDraft(e.target.value)
-              }
-              placeholder="Mensagem para a sala..."
+              onChange={setDraft}
+              onSubmit={handleSend}
+              roster={users}
+              placeholder="Mensagem para a sala... (@ pra mencionar)"
               title="Digite \clear e envie pra apagar o histórico desta sala (se você tiver permissão)"
-              maxLength={500}
-              className="
-                flex-1
-                rounded-lg
-                border
-                border-slate-300
-                bg-white
-                px-3
-                py-2
-                text-sm
-                text-slate-900
-                dark:border-slate-700
-                dark:bg-slate-950
-                dark:text-slate-100
-              "
             />
 
             <button

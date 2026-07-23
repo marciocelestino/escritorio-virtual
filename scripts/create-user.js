@@ -68,7 +68,7 @@ users.push({
   email,
   senhaHash: bcrypt.hashSync(senha, 10),
   status: "Disponivel",
-  room: "Recepção",
+  room: "Espaço Natureza",
   salaNome: null,
   avatarTipo: null,
   avatarValor: null,

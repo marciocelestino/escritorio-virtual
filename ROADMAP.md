@@ -241,6 +241,43 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   de lugar nenhum. A página `/admin` avulsa (acesso direto por URL)
   continua existindo, agora reaproveitando o mesmo componente
   (`components/AdminPanel.tsx`).
+- **Corrige: quem entra na chamada depois do compartilhamento de tela
+  já ter começado não conseguia ver a tela**: o navegador de quem já
+  estava compartilhando não conseguia encaixar essa faixa extra na
+  resposta inicial pro recém-chegado (a oferta dele só previa
+  áudio+câmera) — precisava de uma segunda rodada de negociação
+  específica pra tela, que não estava acontecendo. Agora acontece logo
+  depois da negociação inicial completar.
+- **Chamada de vídeo só na sala atual**: sair da sala (navegar pra
+  outra) agora encerra a participação na chamada automaticamente — não
+  existe mais o dock "preso" numa sala enquanto navega por outras. Só
+  dá pra participar da chamada da sala em que você está.
+- **Corrige: câmera desligada não virava avatar pros outros
+  participantes** (ficava com o último quadro congelado) — antes
+  dependia só do navegador de quem recebia detectar a falta de vídeo,
+  que não era confiável/rápido o bastante. Agora tem um aviso explícito
+  de liga/desliga de câmera pelo socket, no mesmo molde do que já
+  existia pro microfone e pro fim do compartilhamento de tela.
+- **Lista "Online" mais enxuta**: não mostra mais em qual sala cada
+  pessoa está (só nome + status), com fonte bem menor.
+- **Recepção removida**: só restam Sala de Reunião e Espaço Natureza
+  como salas comuns. Quem entra no escritório agora cai direto no
+  Espaço Natureza.
+- **Espaço Natureza é o primeiro card, com visual próprio**: fundo
+  verde escuro (sempre, não muda com o tema claro/escuro do resto do
+  app) e assentos num verde mais claro — visual diferenciado desse
+  espaço de descontração. Como sobrou só 1 sala comum ao lado dela
+  (Sala de Reunião), o primeiro espaço pessoal (entre quem está online)
+  ocupa a terceira posição da fileira de cima, pra não sobrar buraco no
+  layout.
+- **Chat de texto (segunda leva)**: histórico persistente (mensagens
+  sobrevivem a recarregar a página ou reiniciar o servidor — arquivo
+  `data/mensagens-db.json`, mesmo padrão do arquivo de usuários),
+  conversas privadas (1:1) — botão 💬 em cada pessoa da lista "Online"
+  abre um modal de conversa direta, com aviso quando chega mensagem nova
+  e a conversa não está aberta — e autocomplete de @menção (digitar "@"
+  sugere nomes de verdade em vez de precisar acertar o primeiro nome de
+  cabeça), tanto no chat de sala quanto nas conversas privadas.
 
 ## Ainda por fazer
 
@@ -279,17 +316,19 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   "Gestão" entra na "Sala Gestão"). Depende do item anterior (cargos)
   já existir.
 
-### Chat de texto (segunda leva)
+### Chat de texto (terceira leva)
 
-- Já existe um chat básico por sala (ver "Já implementado"). Falta:
-  conversas privadas (1:1) e em grupo, @menção de usuário, e histórico
-  persistente entre sessões.
-- Precisa de um modelo de dados novo pra persistência (mensagens:
-  remetente, sala ou destinatário, texto, hora) e onde guardar isso —
-  pode ser um arquivo JSON simples (como `data/usuarios.json` hoje) ou
-  crescer para algo mais robusto se o volume de mensagens justificar.
-- @menção pode reaproveitar a infraestrutura do "cutucar" (som +
-  notificação) para avisar quem foi citado.
+- **Conversa em grupo** (além de sala e 1:1): ainda não existe — exigiria
+  gerenciar quem faz parte de cada grupo (criar, adicionar, remover
+  gente), mais uma camada de UI pra listar/gerenciar grupos.
+- **Lista de conversas privadas**: hoje só dá pra abrir uma conversa
+  privada clicando no 💬 de alguém que está online agora. Não existe uma
+  lista "minhas conversas" pra retomar uma conversa com alguém que já
+  ficou offline — precisaria de uma consulta nova no servidor (buscar
+  todas as conversas que envolvem meu usuário no arquivo de mensagens).
+- **Indicador de mensagem não lida**: uma DM nova gera um aviso (toast),
+  mas não fica um contador/selo persistente em lugar nenhum até a pessoa
+  abrir a conversa de novo.
 
 ### Gravação de reuniões
 

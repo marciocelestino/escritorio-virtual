@@ -45,6 +45,11 @@ yarn-error.log*
 /data/app.db-wal
 /data/app.db-shm
 
+# histórico de mensagens de chat local (dev) — em produção vive num
+# volume do Railway, igual o arquivo de usuários acima
+/data/mensagens-db.json
+/data/mensagens-db.json.tmp
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -150,6 +150,139 @@ app.prepare().then(() => {
     }
   }
 
+  // Mesma ideia do arquivo de usuários acima, só que pras mensagens de
+  // chat (histórico persistente) — outro arquivo JSON simples, também
+  // lido/escrito direto por aqui (sem passar pelo TypeScript do Next).
+  function resolveMessagesFilePath() {
+    if (process.env.MESSAGES_PATH) {
+      return process.env.MESSAGES_PATH;
+    }
+
+    if (fs.existsSync("/data")) {
+      return path.join("/data", "mensagens.json");
+    }
+
+    return path.join(
+      process.cwd(),
+      "data",
+      "mensagens-db.json"
+    );
+  }
+
+  let cachedMessages = null;
+
+  function loadMessages() {
+    if (cachedMessages) {
+      return cachedMessages;
+    }
+
+    try {
+      const messagesPath = resolveMessagesFilePath();
+
+      if (!fs.existsSync(messagesPath)) {
+        cachedMessages = [];
+        return cachedMessages;
+      }
+
+      cachedMessages = JSON.parse(
+        fs.readFileSync(messagesPath, "utf8")
+      );
+    } catch (error) {
+      console.error(
+        "Erro ao ler mensagens:",
+        error
+      );
+      cachedMessages = [];
+    }
+
+    return cachedMessages;
+  }
+
+  // Limite simples pra não deixar o arquivo crescer pra sempre — guarda
+  // só as últimas N mensagens no total (entre todas as conversas).
+  const MAX_STORED_MESSAGES = 5000;
+
+  function persistMessages() {
+    try {
+      const messagesPath = resolveMessagesFilePath();
+      const tmpPath = `${messagesPath}.tmp`;
+
+      fs.writeFileSync(
+        tmpPath,
+        JSON.stringify(cachedMessages, null, 2)
+      );
+
+      fs.renameSync(tmpPath, messagesPath);
+    } catch (error) {
+      console.error(
+        "Erro ao salvar mensagens:",
+        error
+      );
+    }
+  }
+
+  function addMessage(record) {
+    const messages = loadMessages();
+
+    messages.push(record);
+
+    if (messages.length > MAX_STORED_MESSAGES) {
+      messages.splice(
+        0,
+        messages.length - MAX_STORED_MESSAGES
+      );
+    }
+
+    persistMessages();
+
+    return record;
+  }
+
+  function roomConversationKey(room) {
+    return `room:${room}`;
+  }
+
+  // Chave sempre igual pro mesmo par de pessoas, não importa quem manda
+  // pra quem (ordena os dois ids).
+  function dmConversationKey(userIdA, userIdB) {
+    const [a, b] = [userIdA, userIdB].sort(
+      (x, y) => x - y
+    );
+
+    return `dm:${a}-${b}`;
+  }
+
+  function getConversationMessages(
+    conversationKey,
+    limit
+  ) {
+    const messages = loadMessages();
+
+    const filtered = messages.filter(
+      (message) =>
+        message.conversationKey ===
+        conversationKey
+    );
+
+    return limit
+      ? filtered.slice(-limit)
+      : filtered;
+  }
+
+  function clearConversationMessages(
+    conversationKey
+  ) {
+    const messages = loadMessages();
+
+    cachedMessages = messages.filter(
+      (message) =>
+        message.conversationKey !==
+        conversationKey
+    );
+
+    persistMessages();
+  }
+
   function isUserAdmin(userId) {
     const users = loadAllUsersFromDisk();
     const user = users.find(
@@ -173,7 +306,6 @@ app.prepare().then(() => {
   }
 
   const COMMON_ROOMS = [
-    "Recepção",
     "Sala de Reunião",
     "Espaço Natureza",
   ];
@@ -513,17 +645,28 @@ app.prepare().then(() => {
         return;
       }
 
-      io.emit("chat-message", {
+      const record = addMessage({
+        id: `${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}`,
+        conversationKey: roomConversationKey(room),
+        kind: "room",
         room,
+        toUserId: null,
         fromId: sender.id,
         fromNome: sender.nome,
         message: trimmed,
         at: Date.now(),
       });
+
+      io.emit("chat-message", record);
     });
 
     // Zera o histórico do chat de uma sala — só quem tem permissão (dono
-    // da sala pessoal, ou admin nas salas comuns) via canClearChat.
+    // da sala pessoal, ou admin nas salas comuns) via canClearChat. Além
+    // de avisar quem está com a página aberta, apaga as mensagens
+    // persistidas de verdade (senão elas voltariam na próxima vez que
+    // alguém carregasse o histórico).
     socket.on("clear-chat", ({ room }) => {
       const senderId = socketUsers.get(socket.id);
       const sender = onlineUsers[senderId];
@@ -537,8 +680,114 @@ app.prepare().then(() => {
         return;
       }
 
+      clearConversationMessages(
+        roomConversationKey(room)
+      );
+
       io.emit("chat-cleared", { room });
     });
+
+    // Manda o histórico persistido de uma conversa — de sala (`room`) ou
+    // de uma conversa privada (`withUserId`, com o próprio usuário
+    // conectado).
+    socket.on(
+      "load-chat-history",
+      ({ room, withUserId }) => {
+
+        const senderId = socketUsers.get(
+          socket.id
+        );
+
+        if (!senderId) {
+          return;
+        }
+
+        if (typeof room === "string") {
+          socket.emit("chat-history", {
+            room,
+            messages: getConversationMessages(
+              roomConversationKey(room),
+              200
+            ),
+          });
+          return;
+        }
+
+        if (typeof withUserId === "number") {
+          socket.emit("chat-history", {
+            withUserId,
+            messages: getConversationMessages(
+              dmConversationKey(
+                senderId,
+                withUserId
+              ),
+              200
+            ),
+          });
+        }
+
+      }
+    );
+
+    // Mensagem privada (1:1) — persiste e entrega só pros dois
+    // envolvidos, nunca em broadcast (diferente do chat de sala).
+    socket.on(
+      "dm-message",
+      ({ toUserId, message }) => {
+
+        const senderId = socketUsers.get(
+          socket.id
+        );
+
+        const sender = onlineUsers[senderId];
+
+        if (
+          !sender ||
+          typeof message !== "string" ||
+          typeof toUserId !== "number" ||
+          toUserId === senderId
+        ) {
+          return;
+        }
+
+        const trimmed = message
+          .trim()
+          .slice(0, 500);
+
+        if (!trimmed) {
+          return;
+        }
+
+        const record = addMessage({
+          id: `${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}`,
+          conversationKey: dmConversationKey(
+            senderId,
+            toUserId
+          ),
+          kind: "dm",
+          room: null,
+          toUserId,
+          fromId: sender.id,
+          fromNome: sender.nome,
+          message: trimmed,
+          at: Date.now(),
+        });
+
+        socket.emit("dm-message", record);
+
+        const target = onlineUsers[toUserId];
+
+        if (target) {
+          io.to(target.socketId).emit(
+            "dm-message",
+            record
+          );
+        }
+
+      }
+    );
 
     // Pede pra um participante da chamada mutar o próprio microfone. Não
     // dá pra silenciar a faixa de áudio de outra pessoa à força (WebRTC
@@ -613,6 +862,32 @@ app.prepare().then(() => {
       socket.to(callKey).emit("mic-state-changed", {
         socketId: socket.id,
         micOn: Boolean(micOn),
+      });
+    });
+
+    // Mesma ideia do mic-state, só que pra câmera — sinal explícito de
+    // liga/desliga, em vez de depender só do navegador de quem recebe
+    // detectar a falta de vídeo (que não era confiável/rápido o
+    // suficiente: quem desligava a câmera continuava aparecendo com o
+    // último quadro "congelado" pros outros participantes).
+    socket.on("camera-state", ({ cameraOn, to }) => {
+      if (to) {
+        io.to(to).emit("camera-state-changed", {
+          socketId: socket.id,
+          cameraOn: Boolean(cameraOn),
+        });
+        return;
+      }
+
+      const callKey = socketCallRoom.get(socket.id);
+
+      if (!callKey) {
+        return;
+      }
+
+      socket.to(callKey).emit("camera-state-changed", {
+        socketId: socket.id,
+        cameraOn: Boolean(cameraOn),
       });
     });
 

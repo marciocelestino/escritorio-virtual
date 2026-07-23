@@ -5,6 +5,11 @@ type Props = {
   avatarTipo?: string | null;
   avatarValor?: string | null;
   onClick: () => void;
+  // O Espaço Natureza tem fundo verde escuro sempre (não muda com o tema
+  // claro/escuro) — o nome embaixo do avatar precisa ficar claro ali
+  // independente do tema, em vez de seguir o padrão (escuro no claro,
+  // claro no escuro) usado nas outras salas.
+  variant?: "default" | "nature";
 };
 
 // Item de uma grade de assentos (CSS grid, não posicionamento absoluto em
@@ -17,6 +22,7 @@ export default function PositionedAvatar({
   avatarTipo,
   avatarValor,
   onClick,
+  variant = "default",
 }: Props) {
 
   const initials =
@@ -105,16 +111,19 @@ export default function PositionedAvatar({
       </div>
 
       <span
-        className="
+        className={`
           mt-1
           max-w-[64px]
           truncate
           text-center
           text-[10px]
           font-medium
-          text-slate-900
-          dark:text-slate-100
-        "
+          ${
+            variant === "nature"
+              ? "text-emerald-50"
+              : "text-slate-900 dark:text-slate-100"
+          }
+        `}
       >
         {isCurrentUser && "👑 "}
         {nome}

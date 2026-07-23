@@ -34,13 +34,9 @@ type Props = {
   room: string;
   autoJoin?: boolean;
   onNotify?: (message: string) => void;
-  onJoined?: () => void;
-  onLeft?: () => void;
   myNome?: string;
   myAvatarTipo?: string | null;
   myAvatarValor?: string | null;
-  viewingDifferentRoom?: boolean;
-  onGoToCallRoom?: () => void;
   roster?: RosterUser[];
   // Largura atual da barra lateral (Chat/Usuários) em app/office/page.tsx —
   // a barra da chamada reserva esse espaço pra não ficar por baixo dela, e
@@ -379,13 +375,9 @@ export default function VideoMeeting({
   room,
   autoJoin = false,
   onNotify,
-  onJoined,
-  onLeft,
   myNome,
   myAvatarTipo,
   myAvatarValor,
-  viewingDifferentRoom = false,
-  onGoToCallRoom,
   roster,
   sidebarWidthPx = 320,
   onOpenChat,
@@ -439,6 +431,9 @@ export default function VideoMeeting({
     );
 
   const micOnRef =
+    useRef(true);
+
+  const cameraOnRef =
     useRef(true);
 
   // Detecção de quem está falando: um AnalyserNode por participante (local
@@ -929,30 +924,6 @@ export default function VideoMeeting({
         });
     }
 
-    // Se já estivermos compartilhando a tela quando esse participante
-    // entrar/reconectar, manda a tela pra ele também num sender dedicado —
-    // sem isso, quem chega depois do início do compartilhamento nunca via
-    // a tela.
-    const screenStream =
-      screenStreamRef.current;
-
-    const screenTrack =
-      screenStream?.getVideoTracks()[0];
-
-    if (screenStream && screenTrack) {
-
-      const sender = peer.addTrack(
-        screenTrack,
-        screenStream
-      );
-
-      screenSendersRef.current.set(
-        remoteSocketId,
-        sender
-      );
-
-    }
-
     peersRef.current.set(
       remoteSocketId,
       peer
@@ -1116,8 +1087,6 @@ export default function VideoMeeting({
 
   function leaveMeeting() {
 
-    const wasJoined = joinedRef.current;
-
     const socket = getSocket();
 
     socket.emit("leave-meeting");
@@ -1148,10 +1117,6 @@ export default function VideoMeeting({
     setShowDeviceSettings(false);
 
     joiningRef.current = false;
-
-    if (wasJoined) {
-      onLeft?.();
-    }
   }
 
   async function joinMeeting(
@@ -1228,8 +1193,6 @@ export default function VideoMeeting({
         Boolean(options.audioOnly)
       );
       setJoined(true);
-
-      onJoined?.();
 
       const socket =
         getSocket();
@@ -1311,6 +1274,10 @@ export default function VideoMeeting({
       setStream(localStream);
       setCameraOn(true);
 
+      getSocket().emit("camera-state", {
+        cameraOn: true,
+      });
+
     } catch (error) {
 
       console.error(
@@ -1355,6 +1322,10 @@ export default function VideoMeeting({
           ? null
           : current
       );
+
+      getSocket().emit("camera-state", {
+        cameraOn: false,
+      });
 
       return;
     }
@@ -1656,6 +1627,10 @@ export default function VideoMeeting({
     micOnRef.current = micOn;
   }, [micOn]);
 
+  useEffect(() => {
+    cameraOnRef.current = cameraOn;
+  }, [cameraOn]);
+
   // Anexa/remove o analisador de volume da própria câmera quando ela
   // liga/desliga (o áudio local continua ativo mesmo com a câmera
   // desligada, então o analisador acompanha o `stream`, não a câmera).
@@ -1899,6 +1874,28 @@ export default function VideoMeeting({
     );
 
     socket.on(
+      "camera-state-changed",
+      ({
+        socketId,
+        cameraOn: remoteCameraOn,
+      }: {
+        socketId: string;
+        cameraOn: boolean;
+      }) => {
+
+        // Sinal explícito — mais confiável do que só esperar o
+        // navegador detectar a falta de vídeo (track.muted), que podia
+        // demorar ou nunca disparar, deixando a pessoa "congelada" no
+        // último quadro pros outros participantes.
+        setRemoteCameraOff((prev) => ({
+          ...prev,
+          [socketId]: !remoteCameraOn,
+        }));
+
+      }
+    );
+
+    socket.on(
       "screen-share-stopped",
       ({
         socketId,
@@ -2034,12 +2031,18 @@ export default function VideoMeeting({
         }
 
         // Quem já está na chamada avisa o recém-chegado do próprio estado
-        // do microfone — esse estado não é transmitido por padrão, só nas
-        // mudanças, então sem isso o selo de "mutado" ficaria incorreto
-        // até a próxima vez que a pessoa mutar/desmutar.
+        // do microfone e da câmera — esses estados não são transmitidos
+        // por padrão, só nas mudanças, então sem isso os selos ficariam
+        // incorretos até a próxima vez que a pessoa mutar/desmutar ou
+        // ligar/desligar a câmera.
         socket.emit("mic-state", {
           to: socketId,
           micOn: micOnRef.current,
+        });
+
+        socket.emit("camera-state", {
+          to: socketId,
+          cameraOn: cameraOnRef.current,
         });
 
       }
@@ -2091,6 +2094,25 @@ export default function VideoMeeting({
               answer,
             }
           );
+
+          // Se eu já estiver compartilhando a tela, quem acabou de
+          // entrar na chamada não tinha como prever essa faixa extra na
+          // oferta dele (só previu áudio + câmera) — o navegador não
+          // consegue encaixar a tela na resposta inicial, precisa de uma
+          // segunda rodada de negociação, específica pra ela, agora que
+          // a primeira já deixou a conexão em signalingState "stable".
+          // Sem isso, quem entra depois do compartilhamento começar
+          // nunca recebe a tela.
+          const screenTrack =
+            screenStreamRef.current?.getVideoTracks()[0];
+
+          if (screenTrack) {
+            await sendScreenTrackToPeer(
+              from,
+              peer,
+              screenTrack
+            );
+          }
 
         } catch (error) {
 
@@ -2183,6 +2205,7 @@ export default function VideoMeeting({
       socket.off("muted-by-someone");
       socket.off("kicked-from-meeting");
       socket.off("mic-state-changed");
+      socket.off("camera-state-changed");
       socket.off("screen-share-stopped");
       socket.off(
         "connect",
@@ -2378,26 +2401,6 @@ export default function VideoMeeting({
             🎥 {room} · {participantCount}
             {" "}participante(s)
           </span>
-
-          {viewingDifferentRoom &&
-            onGoToCallRoom && (
-
-              <button
-                onClick={onGoToCallRoom}
-                className="
-                  mt-1
-                  block
-                  text-left
-                  text-[11px]
-                  text-blue-600
-                  hover:underline
-                  dark:text-blue-400
-                "
-              >
-                ↩️ Voltar pra sala da chamada
-              </button>
-
-            )}
 
         </div>
 

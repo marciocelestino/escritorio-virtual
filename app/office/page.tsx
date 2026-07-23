@@ -13,6 +13,7 @@ import RoomPanel, {
   type ChatMessage,
 } from "@/components/RoomPanel";
 import StatusSelector from "@/components/StatusSelector";
+import DirectMessageModal from "@/components/DirectMessageModal";
 import { getSessionUser, getSessionToken } from "@/lib/session";
 import { useMounted } from "@/lib/useMounted";
 import OfficeMap from "@/components/OfficeMap";
@@ -93,7 +94,7 @@ export default function OfficePage() {
   const router = useRouter();
 
   const [currentRoom, setCurrentRoom] =
-    useState("Recepção");
+    useState("Espaço Natureza");
 
   const [status, setStatus] =
     useState<StatusValue>("Disponivel");
@@ -112,6 +113,28 @@ export default function OfficePage() {
 
   const [entryRequest, setEntryRequest] =
   useState<EntryRequest | null>(null);
+
+  // Conversa privada (DM) aberta agora, se houver — só uma por vez, num
+  // modal por cima do resto da tela.
+  const [activeDm, setActiveDm] = useState<{
+    id: number;
+    nome: string;
+    avatarTipo?: string | null;
+    avatarValor?: string | null;
+  } | null>(null);
+
+  // Espelha activeDm pra uso dentro do handler de socket registrado só
+  // uma vez no mount (currentUserId-style closure presa) — decide se
+  // mostra notificação de DM nova ou não (não mostra se a conversa já
+  // está aberta na tela).
+  const activeDmRef = useRef<
+    number | null
+  >(null);
+
+  useEffect(() => {
+    activeDmRef.current =
+      activeDm?.id ?? null;
+  }, [activeDm]);
 
   // Pedido de entrada aceito, aguardando ser processado — não dá pra
   // chamar moveToRoom/chooseSeat direto de dentro do handler de socket
@@ -140,12 +163,12 @@ export default function OfficePage() {
     string | null
   >(null);
 
-  // Sala da chamada de vídeo atual — fica fixa a partir do momento em que
-  // entra numa chamada, mesmo que a pessoa navegue pra outra sala (o dock
-  // flutuante continua mostrando essa chamada até ela sair de verdade).
-  // null = não está em nenhuma chamada agora.
-  const [callRoom, setCallRoom] =
-  useState<string | null>(null);
+  // Salas cujo histórico persistido já foi pedido nesta sessão — evita
+  // pedir de novo toda vez que a pessoa volta pra uma sala em que já
+  // esteve.
+  const loadedRoomHistoryRef = useRef<
+    Set<string>
+  >(new Set());
 
   const [notification, setNotification] =
   useState("");
@@ -257,7 +280,7 @@ export default function OfficePage() {
   // sala/status/portas passa a ser rejeitada silenciosamente até a
   // pessoa recarregar a página.
   const presenceRef = useRef({
-    room: "Recepção",
+    room: "Espaço Natureza",
     status: "Disponivel" as StatusValue,
     portasAbertas: false,
     salaTrancada: false,
@@ -716,18 +739,33 @@ socket.on(
   "chat-message",
   (msg: ChatMessage & { room: string }) => {
 
-    setChatMessages((prev) => ({
-      ...prev,
-      [msg.room]: [
-        ...(prev[msg.room] ?? []),
-        {
-          fromId: msg.fromId,
-          fromNome: msg.fromNome,
-          message: msg.message,
-          at: msg.at,
-        },
-      ].slice(-200),
-    }));
+    setChatMessages((prev) => {
+
+      const existing = prev[msg.room] ?? [];
+
+      if (
+        existing.some(
+          (m) => m.id === msg.id
+        )
+      ) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        [msg.room]: [
+          ...existing,
+          {
+            id: msg.id,
+            fromId: msg.fromId,
+            fromNome: msg.fromNome,
+            message: msg.message,
+            at: msg.at,
+          },
+        ].slice(-200),
+      };
+
+    });
 
     if (
       msg.fromId !== user.id &&
@@ -740,7 +778,7 @@ socket.on(
       setMentions((prev) =>
         [
           {
-            id: `${msg.room}-${msg.at}-${msg.fromId}`,
+            id: msg.id,
             room: msg.room,
             fromNome: msg.fromNome,
             message: msg.message,
@@ -748,6 +786,83 @@ socket.on(
           },
           ...prev,
         ].slice(0, 20)
+      );
+
+    }
+
+  }
+);
+
+// Histórico persistido de uma sala, carregado ao entrar nela pela
+// primeira vez nesta sessão (ver loadedRoomHistoryRef). Mescla com o
+// que já tiver chegado em tempo real nesse meio-tempo, sem duplicar.
+socket.on(
+  "chat-history",
+  ({
+    room,
+    messages,
+  }: {
+    room?: string;
+    withUserId?: number;
+    messages: ChatMessage[];
+  }) => {
+
+    if (!room) {
+      return;
+    }
+
+    setChatMessages((prev) => {
+
+      const existing = prev[room] ?? [];
+      const existingIds = new Set(
+        existing.map((m) => m.id)
+      );
+
+      const merged = [
+        ...messages.filter(
+          (m) => !existingIds.has(m.id)
+        ),
+        ...existing,
+      ];
+
+      merged.sort((a, b) => a.at - b.at);
+
+      return {
+        ...prev,
+        [room]: merged.slice(-200),
+      };
+
+    });
+
+  }
+);
+
+// Notifica mensagem direta nova só se a conversa com essa pessoa não
+// estiver aberta na tela agora (o próprio modal, quando aberto, escuta
+// esse mesmo evento pra atualizar a lista de mensagens dele).
+socket.on(
+  "dm-message",
+  (msg: ChatMessage & {
+    toUserId: number;
+  }) => {
+
+    const otherPartyId =
+      msg.fromId === user.id
+        ? msg.toUserId
+        : msg.fromId;
+
+    if (
+      msg.fromId !== user.id &&
+      activeDmRef.current !== otherPartyId
+    ) {
+
+      playPingSound();
+
+      showNotification(
+        `💬 ${msg.fromNome}: ${msg.message.slice(
+          0,
+          60
+        )}`
       );
 
     }
@@ -827,6 +942,29 @@ setCurrentUserId(
     portasAbertas,
     salaTrancada,
   ]);
+
+  // Pede o histórico persistido da sala assim que a pessoa entra nela
+  // pela primeira vez nesta sessão (troca de sala ou carregamento
+  // inicial da página).
+  useEffect(() => {
+
+    if (
+      loadedRoomHistoryRef.current.has(
+        currentRoom
+      )
+    ) {
+      return;
+    }
+
+    loadedRoomHistoryRef.current.add(
+      currentRoom
+    );
+
+    getSocket().emit("load-chat-history", {
+      room: currentRoom,
+    });
+
+  }, [currentRoom]);
 
   useEffect(() => {
 
@@ -919,19 +1057,11 @@ setCurrentUserId(
     return null;
   }
 
-  // Enquanto não estiver em nenhuma chamada, o dock representa a sala que
-  // está sendo vista agora. Assim que entra numa chamada, `callRoom` fica
-  // fixo naquela sala — navegar pra outra sala não muda mais o `room` da
-  // chamada, só o que aparece no resto da tela (é isso que faz o dock
-  // sobreviver à navegação).
-  const videoRoom =
-    callRoom ?? currentRoom;
-
-  // Com uma chamada em andamento o dock sempre aparece (mesmo se a sala
-  // que está sendo vista agora não suporta chamada própria); sem chamada,
-  // só aparece nas salas que suportam.
+  // A chamada de vídeo só existe na sala em que a pessoa está agora — sair
+  // da sala (mudar de sala) encerra a participação na chamada
+  // automaticamente (o componente desmonta/remonta com o `room` novo, e o
+  // efeito de limpeza do VideoMeeting cuida de sair da chamada anterior).
   const showVideoDock =
-    callRoom !== null ||
     roomSupportsCall(currentRoom);
 
   const currentRoomUsers =
@@ -947,8 +1077,7 @@ setCurrentUserId(
     );
 
   const autoJoinCall = Boolean(
-    callRoom === null &&
-      roomSupportsCall(currentRoom) &&
+    roomSupportsCall(currentRoom) &&
       currentRoomUsers.find(
         (user) => user.id === currentUserId
       )?.portasAbertas &&
@@ -957,11 +1086,6 @@ setCurrentUserId(
 
   const myself = allUsers.find(
     (user) => user.id === currentUserId
-  );
-
-  const viewingDifferentRoom = Boolean(
-    callRoom !== null &&
-      callRoom !== currentRoom
   );
 
   return (
@@ -1112,27 +1236,13 @@ setCurrentUserId(
         {showVideoDock && (
 
           <VideoMeeting
-            room={videoRoom}
+            room={currentRoom}
             autoJoin={autoJoinCall}
             onNotify={showNotification}
-            onJoined={() =>
-              setCallRoom(currentRoom)
-            }
-            onLeft={() =>
-              setCallRoom(null)
-            }
             myNome={myself?.nome}
             myAvatarTipo={myself?.avatarTipo}
             myAvatarValor={myself?.avatarValor}
             roster={allUsers}
-            viewingDifferentRoom={
-              viewingDifferentRoom
-            }
-            onGoToCallRoom={() => {
-              if (callRoom) {
-                moveToRoom(callRoom);
-              }
-            }}
             sidebarWidthPx={
               barraLateralFechada ? 0 : 320
             }
@@ -1390,9 +1500,17 @@ setCurrentUserId(
                 key={user.id}
                 nome={user.nome}
                 status={user.status}
-                room={
-                  user.room !== currentRoom
-                    ? user.room
+                onOpenDm={
+                  user.id !== currentUserId
+                    ? () =>
+                        setActiveDm({
+                          id: user.id,
+                          nome: user.nome,
+                          avatarTipo:
+                            user.avatarTipo,
+                          avatarValor:
+                            user.avatarValor,
+                        })
                     : undefined
                 }
                 onInvite={
@@ -1424,6 +1542,17 @@ setCurrentUserId(
         </aside>
 
       </div>
+
+      {activeDm && currentUserId && (
+
+        <DirectMessageModal
+          currentUserId={currentUserId}
+          otherUser={activeDm}
+          roster={allUsers}
+          onClose={() => setActiveDm(null)}
+        />
+
+      )}
 
     </main>
   );

@@ -1,9 +1,5 @@
 import PositionedAvatar from "../PositionedAvatar";
-import {
-  EmptySeatMarker,
-  RoomBadge,
-  ROOM_BADGE_COLORS,
-} from "./RoomDecor";
+import { EmptySeatMarker } from "./RoomDecor";
 
 type User = {
   id: number;
@@ -28,6 +24,9 @@ type Props = {
 // 10 lugares (2 fileiras de 5), mesma altura da Sala de Reunião.
 const SEAT_COUNT = 10;
 
+// Fundo verde escuro sempre (não depende do tema claro/escuro do resto
+// do app) — combina com a ideia de "espaço natureza" e destaca essa sala
+// das outras no mapa.
 export default function NatureRoom({
   users,
   currentUserId,
@@ -43,10 +42,13 @@ export default function NatureRoom({
         flex-col
         rounded-2xl
         border
-        bg-green-50
+        border-emerald-800/40
+        bg-gradient-to-br
+        from-emerald-950
+        via-green-950
+        to-emerald-900
         p-4
-        dark:border-white/10
-        dark:bg-slate-900
+        shadow-inner
       "
     >
       <h3
@@ -57,16 +59,25 @@ export default function NatureRoom({
           gap-2
           text-[10px]
           font-semibold
-          text-slate-900
-          dark:text-slate-100
+          text-emerald-50
         "
       >
-        <RoomBadge
-          icon="🌳"
-          colorClass={
-            ROOM_BADGE_COLORS.natureza
-          }
-        />
+        <span
+          className="
+            flex
+            h-7
+            w-7
+            shrink-0
+            items-center
+            justify-center
+            rounded-full
+            bg-emerald-400/20
+            text-sm
+            text-emerald-200
+          "
+        >
+          🌳
+        </span>
         Espaço Natureza
       </h3>
 
@@ -106,6 +117,7 @@ export default function NatureRoom({
                   avatarValor={
                     occupant.avatarValor
                   }
+                  variant="nature"
                   onClick={() =>
                     onUserClick(
                       occupant.id,
@@ -119,6 +131,7 @@ export default function NatureRoom({
             return (
               <EmptySeatMarker
                 key={seatIndex}
+                variant="nature"
                 onClick={() =>
                   onSeatClick(seatIndex)
                 }

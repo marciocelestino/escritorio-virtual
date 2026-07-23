@@ -1,5 +1,4 @@
 import { buildRoomList } from "@/lib/rooms";
-import ReceptionRoom from "./rooms/ReceptionRoom";
 import MeetingRoom from "./rooms/MeetingRoom";
 import NatureRoom from "./rooms/NatureRoom";
 import UserOfficeRoom from "./rooms/UserOfficeRoom";
@@ -159,15 +158,21 @@ export default function OfficeMap({
 
   const allRooms = buildRoomList(users);
 
-  // buildRoomList sempre devolve as 3 salas comuns primeiro (vindas de
-  // data/salas.json) — as salas pessoais são derivadas direto de `users`
-  // logo abaixo, já que precisamos saber quem está online ou não pra
-  // decidir entre mostrar a sala inteira ou só uma marcação pequena.
-  const commonRooms = allRooms.slice(0, 3);
+  // buildRoomList sempre devolve as salas comuns primeiro (vindas de
+  // data/salas.json, nessa ordem: Espaço Natureza, Sala de Reunião) — as
+  // salas pessoais são derivadas direto de `users` logo abaixo, já que
+  // precisamos saber quem está online ou não pra decidir entre mostrar a
+  // sala inteira ou só uma marcação pequena.
+  const commonRooms = allRooms.slice(0, 2);
 
   const onlineOwners = users.filter(
     (user) => user.online !== false
   );
+
+  const [
+    firstOnlineOwner,
+    ...remainingOnlineOwners
+  ] = onlineOwners;
 
   const offlineOwners = users.filter(
     (user) => user.online === false
@@ -194,17 +199,6 @@ export default function OfficeMap({
 
     const seatClick = (seat: number) =>
       onSeatClick(roomName, seat);
-
-    if (roomName === "Recepção") {
-      return (
-        <ReceptionRoom
-          users={usersInRoom}
-          currentUserId={currentUserId}
-          onUserClick={onUserClick}
-          onSeatClick={seatClick}
-        />
-      );
-    }
 
     if (roomName === "Sala de Reunião") {
       return (
@@ -284,9 +278,17 @@ export default function OfficeMap({
           {renderRoom(commonRooms[1].nome)}
         </div>
 
-        <div className="min-w-[260px]">
-          {renderRoom(commonRooms[2].nome)}
-        </div>
+        {/* O primeiro espaço pessoal (entre quem está online) ocupa essa
+            terceira coluna, ao lado da Sala de Reunião — sem ele aqui,
+            sobraria um buraco visual já que só temos 2 salas comuns
+            agora (Recepção foi removida). */}
+        {firstOnlineOwner && (
+          <div className="min-w-[260px]">
+            {renderRoom(
+              personalRoomName(firstOnlineOwner)
+            )}
+          </div>
+        )}
 
       </div>
 
@@ -298,7 +300,7 @@ export default function OfficeMap({
         }}
       >
 
-        {onlineOwners.map((owner) => (
+        {remainingOnlineOwners.map((owner) => (
 
           <div key={owner.id}>
             {renderRoom(

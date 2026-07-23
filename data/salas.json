@@ -1,14 +1,10 @@
 [
   {
-    "id": "recepcao",
-    "nome": "Recepção"
+    "id": "natureza",
+    "nome": "Espaço Natureza"
   },
   {
     "id": "reuniao",
     "nome": "Sala de Reunião"
-  },
-  {
-    "id": "natureza",
-    "nome": "Espaço Natureza"
   }
 ]
