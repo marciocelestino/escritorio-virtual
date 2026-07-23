@@ -772,17 +772,60 @@ export default function VideoMeeting({
 
     try {
 
-      const mediaStream =
-        await navigator.mediaDevices.getUserMedia({
-          video: !options.audioOnly,
-          audio: true,
-        });
+      let mediaStream: MediaStream;
+      let joinedAudioOnly = Boolean(
+        options.audioOnly
+      );
+
+      try {
+
+        mediaStream =
+          await navigator.mediaDevices.getUserMedia({
+            video: !options.audioOnly,
+            audio: true,
+          });
+
+      } catch (error) {
+
+        // Muitos computadores de escritório não têm câmera (só monitor +
+        // teclado), e sem isso o pedido acima falha por inteiro — mesmo a
+        // pessoa tendo microfone e podendo entrar só com áudio. Se o pedido
+        // era por câmera e o motivo foi falta/uso indevido do dispositivo
+        // de vídeo (não recusa de permissão), tenta de novo só com áudio
+        // em vez de simplesmente barrar a entrada na chamada.
+        const errorName = (
+          error as DOMException
+        )?.name;
+
+        const cameraUnavailable =
+          !options.audioOnly &&
+          (errorName === "NotFoundError" ||
+            errorName === "NotReadableError" ||
+            errorName === "OverconstrainedError");
+
+        if (!cameraUnavailable) {
+          throw error;
+        }
+
+        mediaStream =
+          await navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: true,
+          });
+
+        joinedAudioOnly = true;
+
+        onNotify?.(
+          "📷 Câmera não encontrada — você entrou na chamada só com áudio."
+        );
+
+      }
 
       localStreamRef.current =
         mediaStream;
 
       setStream(mediaStream);
-      setCameraOn(!options.audioOnly);
+      setCameraOn(!joinedAudioOnly);
       setMicOn(true);
       setAutoJoined(
         Boolean(options.audioOnly)
@@ -807,9 +850,22 @@ export default function VideoMeeting({
       );
 
       if (!options.audioOnly) {
-        alert(
-          "Não foi possível acessar câmera ou microfone."
-        );
+
+        const errorName = (
+          error as DOMException
+        )?.name;
+
+        const message =
+          errorName === "NotFoundError"
+            ? "Nenhuma câmera ou microfone encontrado neste computador."
+            : errorName === "NotAllowedError"
+            ? "Permissão de câmera/microfone negada. Verifique as permissões do site no navegador."
+            : errorName === "NotReadableError"
+            ? "A câmera ou microfone já está sendo usado por outro programa."
+            : "Não foi possível acessar câmera ou microfone.";
+
+        alert(message);
+
       }
 
     } finally {
