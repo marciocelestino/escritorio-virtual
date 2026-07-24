@@ -513,11 +513,17 @@ if (!user) {
   return;
 }
 
-fetch("/api/users")
+fetch(
+  `/api/users?token=${encodeURIComponent(
+    getSessionToken() ?? ""
+  )}`
+)
   .then((res) => res.json())
   .then((users) => {
     setRoster(
-      users as UserItem[]
+      Array.isArray(users)
+        ? (users as UserItem[])
+        : []
     );
   })
   .catch((error) => {
@@ -1627,9 +1633,6 @@ setCurrentUserId(
                 key={user.id}
                 nome={user.nome}
                 status={user.status}
-                spotifyTrack={
-                  user.spotifyTrack
-                }
                 unreadDmCount={
                   unreadDms[user.id] ?? 0
                 }

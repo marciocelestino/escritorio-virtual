@@ -128,6 +128,25 @@ export async function PUT(req: Request) {
       );
     }
 
+    // Uma foto precisa ser mesmo uma imagem (data URI gerada no próprio
+    // navegador, ver components/MeusDados.tsx) — sem essa checagem, dava
+    // pra por qualquer URL externa ali, que vira <img src="..."> na tela
+    // de todo mundo: um jeito de descobrir quando alguém está online (e,
+    // de forma limitada, o IP da pessoa) via um servidor de fora (achado
+    // "Médio" do relatório de segurança de 23/07/2026).
+    if (
+      body.avatarTipo === "foto" &&
+      !body.avatarValor.startsWith("data:image/")
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "A foto precisa ser um arquivo de imagem enviado, não um link.",
+        },
+        { status: 400 }
+      );
+    }
+
     fields.avatarTipo = body.avatarTipo;
     fields.avatarValor = body.avatarValor;
   }

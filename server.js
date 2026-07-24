@@ -31,6 +31,20 @@ const SERVER_BOOT_ID = `${Date.now()}-${Math.random()
   .toString(36)
   .slice(2)}`;
 
+// Sem SESSION_SECRET definido, o valor de reserva abaixo entra em ação —
+// e como ele está escrito no código-fonte, é público. Em produção, isso
+// deixaria qualquer pessoa que veja o código forjar um token de sessão
+// válido pra qualquer usuário (inclusive admin), sem senha nenhuma. Por
+// isso, em produção, a ausência da variável derruba o processo em vez de
+// seguir com um segredo inseguro (achado "Alto" do relatório de
+// segurança de 23/07/2026).
+if (!process.env.SESSION_SECRET && !dev) {
+  console.error(
+    "ERRO FATAL: SESSION_SECRET não está definido. Configure essa variável de ambiente (Railway → Variables) antes de subir o servidor em produção."
+  );
+  process.exit(1);
+}
+
 const SESSION_SECRET =
   process.env.SESSION_SECRET ||
   "dev-only-insecure-secret-change-me";
@@ -647,6 +661,19 @@ app.prepare().then(() => {
     }
 
     return seat;
+  }
+
+  // Só entrega o pedido se quem manda e o alvo estiverem na mesma
+  // chamada agora — antes alguns eventos (mutar, liga/desliga mic e
+  // câmera de outra pessoa) confiavam cegamente no socketId "to" que o
+  // navegador de quem pediu informava, sem checar relação nenhuma entre
+  // os dois (achado "Médio" do relatório de segurança de 23/07/2026).
+  function sharesCallRoom(socketIdA, socketIdB) {
+    const callKey = socketCallRoom.get(socketIdA);
+    return Boolean(
+      callKey &&
+        socketCallRoom.get(socketIdB) === callKey
+    );
   }
 
   function leaveCurrentCall(socket) {
@@ -1284,7 +1311,11 @@ app.prepare().then(() => {
       const senderId = socketUsers.get(socket.id);
       const sender = onlineUsers[senderId];
 
-      if (!sender || !to) {
+      if (
+        !sender ||
+        !to ||
+        !sharesCallRoom(socket.id, to)
+      ) {
         return;
       }
 
@@ -1354,6 +1385,10 @@ app.prepare().then(() => {
     // estava lá, já que esse estado não é transmitido em broadcast).
     socket.on("mic-state", ({ micOn, to }) => {
       if (to) {
+        if (!sharesCallRoom(socket.id, to)) {
+          return;
+        }
+
         io.to(to).emit("mic-state-changed", {
           socketId: socket.id,
           micOn: Boolean(micOn),
@@ -1380,6 +1415,10 @@ app.prepare().then(() => {
     // último quadro "congelado" pros outros participantes).
     socket.on("camera-state", ({ cameraOn, to }) => {
       if (to) {
+        if (!sharesCallRoom(socket.id, to)) {
+          return;
+        }
+
         io.to(to).emit("camera-state-changed", {
           socketId: socket.id,
           cameraOn: Boolean(cameraOn),

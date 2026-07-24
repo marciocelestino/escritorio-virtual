@@ -1,15 +1,9 @@
-import { formatSpotifyTrackLabel } from "@/lib/spotify";
-
 type Props = {
   nome: string;
   status?: string;
   onInvite?: () => void;
   onOpenDm?: () => void;
   unreadDmCount?: number;
-  spotifyTrack?: {
-    nome: string;
-    artista: string;
-  } | null;
 };
 
 export default function UserCard({
@@ -18,7 +12,6 @@ export default function UserCard({
   onInvite,
   onOpenDm,
   unreadDmCount = 0,
-  spotifyTrack,
 }: Props) {
   const getStatusIcon = () => {
     switch (status) {
@@ -75,20 +68,6 @@ export default function UserCard({
         <div className="mt-1 text-[10px] text-slate-500 dark:text-slate-400">
           {getStatusIcon()} {getStatusLabel()}
         </div>
-
-        {spotifyTrack && (
-          <div
-            className="mt-1 max-w-[11rem] truncate text-[10px] text-emerald-600 dark:text-emerald-400"
-            title={formatSpotifyTrackLabel(
-              spotifyTrack
-            )}
-          >
-            🎵{" "}
-            {formatSpotifyTrackLabel(
-              spotifyTrack
-            )}
-          </div>
-        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-1">

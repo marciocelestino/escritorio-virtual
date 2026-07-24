@@ -352,6 +352,40 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   token de curta duração vive só em memória no servidor, renovado por
   uma consulta periódica (a cada 15s, só de quem está online e
   conectado).
+- **Música do Spotify sai da lista lateral "Online"**: fica só no
+  card/sala do dono no mapa, a pedido — a lista lateral volta a mostrar
+  só nome + status.
+- **Correções do relatório de segurança (23/07/2026), itens Alto e
+  Médio**:
+  - `GET /api/users` passou a exigir sessão válida (qualquer pessoa
+    logada, não precisa ser admin) — antes qualquer um com o link
+    baixava nome, e-mail, sala, foto e se é admin de todo mundo.
+  - Limite de tentativas no login (5 erradas → 15 min de espera,
+    por e-mail) e no "esqueci minha senha" (1 pedido a cada 2 minutos
+    por e-mail) — ambos guardados só em memória (reinicia com o
+    servidor).
+  - Foto de perfil só aceita imagem de verdade enviada (data URI),
+    não mais qualquer texto/URL — uma URL externa ali virava um jeito
+    de descobrir quando alguém está online.
+  - Mutar/ligar-desligar mic e câmera de outra pessoa (o "to"
+    direcionado) agora só funciona se quem pede e o alvo estiverem na
+    mesma chamada — antes confiava sem checar em quem o navegador
+    dizia ser o destinatário.
+  - Removido o log que imprimia os 6 primeiros caracteres da chave do
+    Resend a cada boot do servidor.
+  - Em produção, o servidor agora recusa subir (encerra o processo)
+    se `SESSION_SECRET` não estiver definido, em vez de seguir com o
+    valor de reserva inseguro escrito no código-fonte.
+  - **Não mudado, por decisão do próprio relatório** ("não é urgente"):
+    sessão sem revogação de verdade (trocar senha/sair não invalida um
+    token já emitido, só a expiração em 12h resolve) — exigiria guardar
+    sessões ativas em algum lugar, hoje é tudo sem estado.
+  - **Não mudado, por decisão minha**: sinalização bruta de WebRTC
+    (`offer`/`answer`/`ice-candidate`) não ganhou a mesma checagem de
+    "mesma chamada" que mic/câmera/mutar — mexer nisso sem poder testar
+    ao vivo com múltiplos navegadores reais (limitação já conhecida
+    deste ambiente) é arriscado demais pra fazer sem validação de
+    verdade.
 
 ## Ainda por fazer
 

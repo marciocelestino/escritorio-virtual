@@ -4,22 +4,43 @@ import { getUserByEmail, updateUser } from "@/lib/db";
 import { generateRandomPassword } from "@/lib/password";
 import { sendEmail } from "@/lib/email";
 
+// Sem isso, dava pra chamar essa rota repetidamente pro e-mail de um
+// colega — cada chamada troca a senha dele e manda uma nova por e-mail,
+// então virava um jeito fácil de incomodar alguém (a senha antiga para
+// de funcionar a cada pedido), mesmo sem vazar nada (achado "Alto" do
+// relatório de segurança de 23/07/2026). Guarda só em memória (processo
+// único, sem estado compartilhado) — reinicia o servidor, reinicia a
+// contagem, o que é aceitável pra esse tipo de trava simples.
+const COOLDOWN_MS = 2 * 60 * 1000;
+const lastRequestAt = new Map<string, number>();
+
 export async function POST(req: Request) {
   const body = await req.json();
 
   const email =
     typeof body.email === "string"
-      ? body.email.trim()
+      ? body.email.trim().toLowerCase()
       : "";
 
   // Sempre responde com a mesma mensagem genérica, exista ou não o
-  // e-mail — assim ninguém consegue usar essa tela para descobrir quais
-  // e-mails estão cadastrados no sistema.
+  // e-mail (ou esteja em cooldown) — assim ninguém consegue usar essa
+  // tela pra descobrir quais e-mails estão cadastrados no sistema.
   if (email) {
 
-    const user = getUserByEmail(email);
+    const now = Date.now();
+    const last = lastRequestAt.get(email);
+
+    const emCooldown =
+      last !== undefined &&
+      now - last < COOLDOWN_MS;
+
+    const user = emCooldown
+      ? null
+      : getUserByEmail(email);
 
     if (user) {
+
+      lastRequestAt.set(email, now);
 
       const novaSenha =
         generateRandomPassword();
