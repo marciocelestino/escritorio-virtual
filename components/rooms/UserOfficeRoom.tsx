@@ -3,6 +3,7 @@ import {
   EmptySeatMarker,
   OwnerAvatarBadge,
 } from "./RoomDecor";
+import { formatSpotifyTrackLabel } from "@/lib/spotify";
 
 type User = {
   id: number;
@@ -21,6 +22,10 @@ type Props = {
   ownerNome: string;
   ownerAvatarTipo?: string | null;
   ownerAvatarValor?: string | null;
+  ownerSpotifyTrack?: {
+    nome: string;
+    artista: string;
+  } | null;
   locked?: boolean;
   onUserClick: (
     userId: number,
@@ -39,6 +44,7 @@ export default function UserOfficeRoom({
   ownerNome,
   ownerAvatarTipo,
   ownerAvatarValor,
+  ownerSpotifyTrack,
   locked,
   onUserClick,
   onSeatClick,
@@ -79,6 +85,24 @@ export default function UserOfficeRoom({
         <span className="truncate">
           {room}
         </span>
+        {ownerSpotifyTrack && (
+          <span
+            className="
+              truncate
+              font-normal
+              text-emerald-600
+              dark:text-emerald-400
+            "
+            title={formatSpotifyTrackLabel(
+              ownerSpotifyTrack
+            )}
+          >
+            🎵{" "}
+            {formatSpotifyTrackLabel(
+              ownerSpotifyTrack
+            )}
+          </span>
+        )}
         {locked && (
           <span
             title="Sala trancada"

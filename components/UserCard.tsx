@@ -1,3 +1,5 @@
+import { formatSpotifyTrackLabel } from "@/lib/spotify";
+
 type Props = {
   nome: string;
   status?: string;
@@ -77,12 +79,14 @@ export default function UserCard({
         {spotifyTrack && (
           <div
             className="mt-1 max-w-[11rem] truncate text-[10px] text-emerald-600 dark:text-emerald-400"
-            title={`${spotifyTrack.nome} - ${spotifyTrack.artista}`}
+            title={formatSpotifyTrackLabel(
+              spotifyTrack
+            )}
           >
-            🎵 {spotifyTrack.nome}
-            {spotifyTrack.artista
-              ? ` - ${spotifyTrack.artista}`
-              : ""}
+            🎵{" "}
+            {formatSpotifyTrackLabel(
+              spotifyTrack
+            )}
           </div>
         )}
       </div>

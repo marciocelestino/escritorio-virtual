@@ -15,6 +15,10 @@ type User = {
   salaNome?: string | null;
   avatarTipo?: string | null;
   avatarValor?: string | null;
+  spotifyTrack?: {
+    nome: string;
+    artista: string;
+  } | null;
 };
 
 type Props = {
@@ -246,6 +250,7 @@ export default function OfficeMap({
         ownerNome={owner?.nome ?? roomName}
         ownerAvatarTipo={owner?.avatarTipo}
         ownerAvatarValor={owner?.avatarValor}
+        ownerSpotifyTrack={owner?.spotifyTrack}
         locked={owner?.salaTrancada}
         onUserClick={onUserClick}
         onSeatClick={seatClick}
