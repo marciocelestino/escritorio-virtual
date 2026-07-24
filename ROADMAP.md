@@ -412,8 +412,32 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   palavra em tempo real) ficou de fora desta leva, é uma evolução
   natural pra depois usando a mesma infraestrutura de socket já
   existente.
+- **PWA instalável + notificação do computador**: dá pra instalar o
+  Internit Office como um app de verdade (ícone/janela própria, fixável
+  na barra de tarefas/tela inicial) — `app/manifest.ts` + ícones
+  gerados (192/512) + um service worker mínimo (só existe pra habilitar
+  a instalação nos navegadores que exigem isso; não faz cache nem
+  funciona offline, o app depende de WebSocket em tempo real). Menção,
+  DM, cutucão, convite de sala e pedido/resposta de entrada agora
+  também disparam uma notificação do sistema (Windows/Mac/Linux), não
+  só o aviso dentro da aba — só quando a aba não está em foco, pra não
+  duplicar aviso com quem já está olhando a tela. Pede permissão uma
+  vez (banner, na primeira vez que abre) e fica com um controle
+  permanente em "Meus Dados" pra ativar depois se recusar/fechar sem
+  responder. Escopo combinado: só funciona com o navegador/aba aberta
+  em algum lugar (mesmo minimizada) — notificação push de verdade, com
+  o navegador todo fechado, ficou de fora (precisaria de infraestrutura
+  nova: chaves de assinatura, guardar quem autorizou por dispositivo).
 
 ## Ainda por fazer
+
+### PWA e notificações (evolução)
+
+- **Notificação push de verdade** (com o navegador fechado): precisa de
+  `web-push`/chaves VAPID, um service worker que trate o evento `push`
+  de fato, e o servidor guardando a inscrição de cada dispositivo/
+  usuário — bem mais infraestrutura que o modelo atual (Notification
+  API direta, só com a aba aberta em algum lugar).
 
 ### Redesenho visual (em andamento, por fases)
 
@@ -459,17 +483,6 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   determinado(s) cargo(s) podem entrar (ex.: só quem tem o cargo
   "Gestão" entra na "Sala Gestão"). Depende do item anterior (cargos)
   já existir.
-
-### Chat de texto (terceira leva)
-
-- **Conversa em grupo** (além de sala e 1:1): ainda não existe — exigiria
-  gerenciar quem faz parte de cada grupo (criar, adicionar, remover
-  gente), mais uma camada de UI pra listar/gerenciar grupos.
-- **Lista de conversas privadas**: hoje só dá pra abrir uma conversa
-  privada clicando no 💬 de alguém que está online agora. Não existe uma
-  lista "minhas conversas" pra retomar uma conversa com alguém que já
-  ficou offline — precisaria de uma consulta nova no servidor (buscar
-  todas as conversas que envolvem meu usuário no arquivo de mensagens).
 
 ### Gravação de reuniões
 

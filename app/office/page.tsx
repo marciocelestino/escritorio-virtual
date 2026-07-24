@@ -20,6 +20,12 @@ import OfficeMap from "@/components/OfficeMap";
 import VideoMeeting from "@/components/VideoMeeting";
 import { roomSupportsCall } from "@/lib/rooms";
 import { playPingSound } from "@/lib/sound";
+import {
+  isDesktopNotifySupported,
+  getDesktopNotifyPermission,
+  requestDesktopNotifyPermission,
+  notifyDesktop,
+} from "@/lib/desktopNotify";
 
 type StatusValue =
   | "Disponivel"
@@ -120,6 +126,44 @@ export default function OfficePage() {
 
   const [entryRequest, setEntryRequest] =
   useState<EntryRequest | null>(null);
+
+  // Pergunta uma vez só (por navegador) se pode ligar as notificações
+  // do sistema — se a pessoa nunca foi perguntada e o navegador
+  // suporta. Fica também acessível depois em "Meus Dados", pra quem
+  // recusou ou fechou sem responder.
+  const [
+    showNotifyBanner,
+    setShowNotifyBanner,
+  ] = useState(false);
+
+  useEffect(() => {
+
+    const timeoutId = setTimeout(() => {
+
+      if (
+        isDesktopNotifySupported() &&
+        getDesktopNotifyPermission() ===
+          "default" &&
+        !localStorage.getItem(
+          "notificacaoDesktopPedida"
+        )
+      ) {
+        setShowNotifyBanner(true);
+      }
+
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+
+  }, []);
+
+  function dismissNotifyBanner() {
+    localStorage.setItem(
+      "notificacaoDesktopPedida",
+      "true"
+    );
+    setShowNotifyBanner(false);
+  }
 
   // Conversa privada (DM) aberta agora, se houver — só uma por vez, num
   // modal por cima do resto da tela.
@@ -693,6 +737,11 @@ socket.on(
 
     setEntryRequest(payload);
 
+    notifyDesktop(
+      "🔒 Pedido de entrada",
+      `${payload.requesterNome} quer entrar na sua sala.`
+    );
+
   }
 );
 
@@ -728,12 +777,23 @@ socket.on(
         `✅ Pedido aceito — você entrou em ${room}.`
       );
 
+      notifyDesktop(
+        "✅ Pedido aceito",
+        `Você entrou em ${room}.`
+      );
+
     } else {
 
-      showNotification(
+      const deniedMessage =
         reason === "offline"
           ? `🔒 O dono de ${room} está offline no momento.`
-          : `🔒 Seu pedido de entrada em ${room} foi recusado.`
+          : `🔒 Seu pedido de entrada em ${room} foi recusado.`;
+
+      showNotification(deniedMessage);
+
+      notifyDesktop(
+        "🔒 Pedido recusado",
+        deniedMessage
       );
 
     }
@@ -753,6 +813,11 @@ socket.on(
 
     showNotification(
       `🔔 ${fromNome} quer falar com você!`
+    );
+
+    notifyDesktop(
+      "🔔 Cutucão",
+      `${fromNome} quer falar com você.`
     );
 
     // Além do toast (que some sozinho em 3s e é fácil de perder),
@@ -790,6 +855,11 @@ socket.on(
     playPingSound();
 
     setRoomInvite({ fromNome, room });
+
+    notifyDesktop(
+      "📣 Convite",
+      `${fromNome} te chamou para ${room}.`
+    );
 
   }
 );
@@ -847,6 +917,11 @@ socket.on(
         ].slice(0, 20)
       );
 
+      notifyDesktop(
+        `@ ${msg.fromNome} · ${msg.room}`,
+        msg.message
+      );
+
     }
 
   }
@@ -885,6 +960,11 @@ socket.on(
           },
           ...prev,
         ].slice(0, 20)
+      );
+
+      notifyDesktop(
+        `@ ${msg.fromNome} · Chat Geral`,
+        msg.message
       );
 
     }
@@ -962,6 +1042,11 @@ socket.on(
           0,
           60
         )}`
+      );
+
+      notifyDesktop(
+        `💬 ${msg.fromNome}`,
+        msg.message
       );
 
       setUnreadDms((prev) => ({
@@ -1364,6 +1449,56 @@ setCurrentUserId(
               className="rounded-lg bg-amber-500 px-3 py-1 text-sm hover:bg-amber-400"
             >
               Recusar
+            </button>
+
+          </div>
+
+        </div>
+
+      )}
+
+      {showNotifyBanner && (
+
+        <div
+          className="
+            fixed
+            top-64
+            left-1/2
+            z-[60]
+            -translate-x-1/2
+            rounded-xl
+            bg-slate-800
+            px-5
+            py-4
+            text-white
+            shadow-xl
+          "
+        >
+
+          <p>
+            🔔 Ativar notificações do
+            computador? Assim você não perde
+            menção, DM ou cutucão mesmo com o
+            Internit Office em outra aba.
+          </p>
+
+          <div className="mt-3 flex gap-2">
+
+            <button
+              onClick={async () => {
+                await requestDesktopNotifyPermission();
+                dismissNotifyBanner();
+              }}
+              className="rounded-lg bg-white px-3 py-1 text-sm font-medium text-slate-800 hover:bg-slate-100"
+            >
+              Ativar
+            </button>
+
+            <button
+              onClick={dismissNotifyBanner}
+              className="rounded-lg bg-slate-700 px-3 py-1 text-sm hover:bg-slate-600"
+            >
+              Agora não
             </button>
 
           </div>

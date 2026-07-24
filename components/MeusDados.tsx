@@ -5,6 +5,10 @@ import {
   getSessionUser,
   getSessionToken,
 } from "@/lib/session";
+import {
+  getDesktopNotifyPermission,
+  requestDesktopNotifyPermission,
+} from "@/lib/desktopNotify";
 
 type Props = {
   onClose: () => void;
@@ -200,6 +204,35 @@ export default function MeusDados({
       setDesconectandoSpotify(false);
     }
 
+  }
+
+  // Carregado só depois de montar (o valor real vem do navegador,
+  // não existe no primeiro render do servidor).
+  const [
+    notifyPermission,
+    setNotifyPermission,
+  ] = useState<
+    | NotificationPermission
+    | "unsupported"
+    | null
+  >(null);
+
+  useEffect(() => {
+
+    const timeoutId = setTimeout(() => {
+      setNotifyPermission(
+        getDesktopNotifyPermission()
+      );
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+
+  }, []);
+
+  async function ativarNotificacoes() {
+    const result =
+      await requestDesktopNotifyPermission();
+    setNotifyPermission(result);
   }
 
   async function handleFotoChange(
@@ -537,6 +570,58 @@ export default function MeusDados({
 
             )}
           </div>
+
+          {notifyPermission !== "unsupported" && (
+
+            <div className="rounded-lg border border-slate-300 p-3">
+              <div className="mb-2 text-sm font-medium text-slate-700">
+                🔔 Notificações do computador
+              </div>
+
+              <p className="mb-3 text-xs text-slate-500">
+                Avisa fora da aba (menção, DM,
+                cutucão) enquanto o Internit
+                Office estiver aberto em algum
+                lugar do navegador.
+              </p>
+
+              {notifyPermission === null ? (
+
+                <p className="text-xs text-slate-400">
+                  Verificando...
+                </p>
+
+              ) : notifyPermission ===
+                "granted" ? (
+
+                <span className="text-sm text-emerald-600">
+                  ✅ Ativadas
+                </span>
+
+              ) : notifyPermission ===
+                "denied" ? (
+
+                <p className="text-xs text-slate-500">
+                  Bloqueadas nas configurações do
+                  navegador — pra reativar,
+                  precisa mudar lá (clique no
+                  cadeado da barra de endereço).
+                </p>
+
+              ) : (
+
+                <button
+                  type="button"
+                  onClick={ativarNotificacoes}
+                  className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:brightness-95"
+                >
+                  Ativar notificações
+                </button>
+
+              )}
+            </div>
+
+          )}
 
           <details className="rounded-lg border border-slate-300 p-3">
             <summary className="cursor-pointer text-sm font-medium text-slate-700">
