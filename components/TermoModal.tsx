@@ -164,6 +164,28 @@ export default function TermoModal({
 
   const [copied, setCopied] = useState(false);
 
+  // Mostra a explicação sozinha na primeira vez que a pessoa abre o
+  // jogo (localStorage, por navegador) — depois disso só reaparece se
+  // ela clicar no "❓" de novo.
+  const [showHelp, setShowHelp] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !localStorage.getItem(
+        "termoAjudaVista"
+      )
+  );
+
+  function dismissHelp() {
+
+    localStorage.setItem(
+      "termoAjudaVista",
+      "true"
+    );
+
+    setShowHelp(false);
+
+  }
+
   const loadToday = useCallback(async () => {
 
     const token = getSessionToken();
@@ -428,14 +450,126 @@ export default function TermoModal({
             🔤 Termo do Dia
           </h2>
 
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
-          >
-            ✕
-          </button>
+          <div className="flex items-center gap-3">
+
+            <button
+              onClick={() =>
+                setShowHelp((current) => !current)
+              }
+              title="Como jogar"
+              aria-label="Como jogar"
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              ❓
+            </button>
+
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+            >
+              ✕
+            </button>
+
+          </div>
 
         </div>
+
+        {showHelp ? (
+
+          <div className="flex flex-col gap-3 p-4 text-sm text-slate-700 dark:text-slate-300">
+
+            <p>
+              Adivinhe a palavra secreta de{" "}
+              <strong>5 letras</strong> em até{" "}
+              <strong>6 tentativas</strong>.
+              Depois de cada palpite, as letras
+              mudam de cor pra te dar uma pista:
+            </p>
+
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded border-2 text-sm font-bold ${tileClasses(
+                  "correct"
+                )}`}
+              >
+                P
+              </div>
+              <span>
+                <strong>Verde</strong> — a letra
+                está certa, na posição certa.
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded border-2 text-sm font-bold ${tileClasses(
+                  "present"
+                )}`}
+              >
+                R
+              </div>
+              <span>
+                <strong>Amarelo</strong> — a
+                letra existe na palavra, mas em
+                outra posição.
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded border-2 text-sm font-bold ${tileClasses(
+                  "absent"
+                )}`}
+              >
+                Z
+              </div>
+              <span>
+                <strong>Cinza</strong> — a letra
+                não está na palavra.
+              </span>
+            </div>
+
+            <p>
+              A palavra é a{" "}
+              <strong>
+                mesma pra todo mundo
+              </strong>{" "}
+              e muda à meia-noite — todo mundo
+              disputa quem acerta em menos
+              tentativas (veja o placar
+              &quot;Quem já acertou
+              hoje&quot;). Não precisa se
+              preocupar com acento: digitar
+              &quot;irmao&quot; também vale pra
+              &quot;irmão&quot;.
+            </p>
+
+            <button
+              onClick={dismissHelp}
+              className="
+                mt-1
+                self-start
+                rounded-lg
+                border
+                border-slate-300
+                bg-white
+                px-4
+                py-2
+                text-sm
+                font-medium
+                text-slate-900
+                hover:bg-slate-50
+                dark:border-slate-700
+                dark:bg-slate-950
+                dark:text-slate-100
+              "
+            >
+              Entendi, vamos jogar!
+            </button>
+
+          </div>
+
+        ) : (
 
         <div className="flex flex-col items-center gap-4 p-4">
 
@@ -694,6 +828,8 @@ export default function TermoModal({
           )}
 
         </div>
+
+        )}
 
       </div>
 
