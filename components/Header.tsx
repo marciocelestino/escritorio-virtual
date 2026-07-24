@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/session";
 import MeusDados from "@/components/MeusDados";
 import AdminPanel from "@/components/AdminPanel";
 import GeneralChatModal from "@/components/GeneralChatModal";
+import TermoModal from "@/components/TermoModal";
 import { useDarkMode } from "@/lib/useDarkMode";
 
 // Só essa pessoa pode limpar o Chat Geral — a mesma regra que o servidor
@@ -62,6 +63,9 @@ export default function Header({
     showGeneralChat,
     setShowGeneralChat,
   ] = useState(false);
+
+  const [showTermo, setShowTermo] =
+    useState(false);
 
   const [showMentions, setShowMentions] =
     useState(false);
@@ -146,6 +150,28 @@ export default function Header({
           "
         >
           💬
+        </button>
+
+        <button
+          onClick={() => setShowTermo(true)}
+          title="Termo do Dia"
+          aria-label="Termo do Dia"
+          className="
+            flex
+            h-10
+            w-10
+            items-center
+            justify-center
+            rounded-full
+            bg-[#007CB2]
+            text-lg
+            text-white
+            shadow-md
+            transition
+            hover:brightness-110
+          "
+        >
+          🔤
         </button>
 
         {user?.isAdmin && (
@@ -396,6 +422,13 @@ export default function Header({
           onClose={() =>
             setShowGeneralChat(false)
           }
+        />
+      )}
+
+      {showTermo && user && (
+        <TermoModal
+          currentUserId={user.id}
+          onClose={() => setShowTermo(false)}
         />
       )}
 

@@ -396,6 +396,22 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   (clique num link), não um fetch — não tem como anexar um header
   nesse caso. De quebra, `/api/admin/users` parou de expor o
   `spotifyRefreshToken` de cada pessoa pra qualquer admin.
+- **Termo do Dia**: joguinho novo pro sistema geral, ícone 🔤 no
+  cabeçalho (visível pra todo mundo, sem exigir admin). Palavra de 5
+  letras igual pra todo mundo, muda à meia-noite (UTC), 6 tentativas,
+  feedback verde/amarelo/cinza como o Wordle/Termo — cobre "jogar
+  sozinho" (cada um joga a própria tentativa em privado) e "2 ou mais
+  pessoas" (todo mundo disputa a mesma palavra, com um placar de quem
+  já acertou hoje e em quantas tentativas). Guarda sequência de dias
+  seguidos acertando (streak), recorde e taxa de vitórias por pessoa.
+  Botão de compartilhar resultado gera o texto no estilo emoji
+  (🟩🟨⬛) do Wordle original, pra colar em outro lugar se quiser.
+  Lista de palavras (~130, sem acento de propósito, pra simplificar
+  digitação) curada à mão para esta primeira versão — dá pra crescer
+  depois. Duelo ao vivo entre 2 pessoas (correndo pra resolver a mesma
+  palavra em tempo real) ficou de fora desta leva, é uma evolução
+  natural pra depois usando a mesma infraestrutura de socket já
+  existente.
 
 ## Ainda por fazer
 
@@ -418,6 +434,16 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
   em tempo real (ex.: bibliotecas de segmentação corporal) desenhando
   num `<canvas>` antes de enviar o vídeo — precisa adicionar uma
   dependência nova de ML no projeto.
+
+### Termo do Dia (evolução)
+
+- **Duelo ao vivo entre 2 pessoas**: correr pra resolver a mesma
+  palavra em tempo real, vendo o progresso (quantas tentativas) da
+  outra pessoa na hora — usaria a mesma infraestrutura de socket que
+  já existe pra chamada/chat.
+- **Lista de palavras maior**: a lista atual (~130 palavras) é curada à
+  mão pra essa primeira versão — dá pra crescer com mais palavras
+  depois.
 
 ### Compartilhamento de tela
 

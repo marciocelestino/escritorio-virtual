@@ -50,6 +50,10 @@ yarn-error.log*
 /data/mensagens-db.json
 /data/mensagens-db.json.tmp
 
+# progresso/estatísticas do Termo do Dia (dev) — mesmo padrão acima
+/data/termo-db.json
+/data/termo-db.json.tmp
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
