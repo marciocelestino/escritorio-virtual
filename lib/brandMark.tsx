@@ -1,10 +1,8 @@
-// Marca abstrata reaproveitada nos ícones do PWA (192/512) — mesma
-// composição do app/apple-icon.tsx (bolinha rosa + barra azul, cores do
-// logo da Internit), só que parametrizada por tamanho pra manter as
-// proporções em qualquer resolução.
+// Marca usada nos ícones gerados (PWA 192/512, apple-icon) — círculo
+// azul com o "i" branco (bolinha + haste), igual ao favicon final
+// (app/icon.png). Tudo em porcentagem do tamanho total, então funciona
+// em qualquer resolução sem precisar recalcular nada.
 export function brandMarkElement(sizePx: number) {
-
-  const scale = sizePx / 180;
 
   return (
     <div
@@ -19,29 +17,41 @@ export function brandMarkElement(sizePx: number) {
     >
       <div
         style={{
+          width: "88%",
+          height: "88%",
+          borderRadius: "50%",
+          background: "#007CB2",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
-          gap: Math.round(10 * scale),
+          justifyContent: "center",
         }}
       >
         <div
           style={{
-            width: Math.round(28 * scale),
-            height: Math.round(28 * scale),
-            borderRadius: "50%",
-            background: "#C32E4E",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: Math.round(sizePx * 0.06),
           }}
-        />
+        >
+          <div
+            style={{
+              width: Math.round(sizePx * 0.16),
+              height: Math.round(sizePx * 0.16),
+              borderRadius: "50%",
+              background: "#ffffff",
+            }}
+          />
 
-        <div
-          style={{
-            width: Math.round(34 * scale),
-            height: Math.round(84 * scale),
-            borderRadius: Math.round(17 * scale),
-            background: "#007CB2",
-          }}
-        />
+          <div
+            style={{
+              width: Math.round(sizePx * 0.18),
+              height: Math.round(sizePx * 0.42),
+              borderRadius: 9999,
+              background: "#ffffff",
+            }}
+          />
+        </div>
       </div>
     </div>
   );
