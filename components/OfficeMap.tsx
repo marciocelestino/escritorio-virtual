@@ -35,22 +35,32 @@ type Props = {
     room: string,
     seat: number
   ) => void;
+  onOpenDm: (user: {
+    id: number;
+    nome: string;
+    avatarTipo?: string | null;
+    avatarValor?: string | null;
+  }) => void;
 };
 
 // Marcação pequena pra quem está offline — mostra que a pessoa existe no
 // sistema, mas sem abrir a sala inteira dela (só aparece de verdade
 // quando ela conecta). Clicável pra cutucar mesmo offline — o cutucão
 // fica pendente e vira uma mensagem no chat direto quando ela voltar.
+// O balãozinho 💬 no canto do avatar abre uma conversa direta com ela
+// (funciona mesmo offline — a mensagem só chega quando ela conectar).
 function OfflineUserMarker({
   nome,
   avatarTipo,
   avatarValor,
   onClick,
+  onOpenDm,
 }: {
   nome: string;
   avatarTipo?: string | null;
   avatarValor?: string | null;
   onClick: () => void;
+  onOpenDm: () => void;
 }) {
 
   const initials =
@@ -62,12 +72,21 @@ function OfflineUserMarker({
       .toUpperCase() || "?";
 
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       title={`Cutucar ${nome} (offline)`}
       className="
         flex
         w-20
+        cursor-pointer
         flex-col
         items-center
         gap-1
@@ -136,6 +155,32 @@ function OfflineUserMarker({
           "
         />
 
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onOpenDm();
+          }}
+          title={`Mensagem direta para ${nome}`}
+          className="
+            absolute
+            -right-1.5
+            -top-1.5
+            flex
+            h-4
+            w-4
+            items-center
+            justify-center
+            rounded-full
+            bg-white
+            text-[9px]
+            leading-none
+            shadow
+            hover:bg-slate-100
+          "
+        >
+          💬
+        </button>
+
       </div>
 
       <span
@@ -150,7 +195,7 @@ function OfflineUserMarker({
         {nome}
       </span>
 
-    </button>
+    </div>
   );
 }
 
@@ -164,6 +209,7 @@ export default function OfficeMap({
   currentUserId,
   onUserClick,
   onSeatClick,
+  onOpenDm,
 }: Props) {
 
   const allRooms = buildRoomList(users);
@@ -358,6 +404,16 @@ export default function OfficeMap({
                     owner.id,
                     owner.nome
                   )
+                }
+                onOpenDm={() =>
+                  onOpenDm({
+                    id: owner.id,
+                    nome: owner.nome,
+                    avatarTipo:
+                      owner.avatarTipo,
+                    avatarValor:
+                      owner.avatarValor,
+                  })
                 }
               />
 

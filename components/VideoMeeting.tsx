@@ -497,51 +497,57 @@ function PipButton({
 // Botão da barra de chamada — ícone em cima, rótulo embaixo, num "chip"
 // arredondado (mesma linguagem visual do Zoom/Meet), em vez de ícone e
 // texto lado a lado como antes.
+// "toggle" = liga/desliga de verdade (microfone, câmera, compartilhar):
+// ligado fica azul (cor do logo), desligado fica cinza com o ícone
+// vermelho, pra chamar atenção de que está desligado. "neutral" = ação
+// que não é liga/desliga (chat, configurações) — sempre cinza, só
+// destaca um pouco mais quando o painel dela está aberto.
 function CallBarButton({
   icon,
-  label,
   active = false,
   danger = false,
+  variant = "neutral",
   onClick,
   title,
 }: {
   icon: string;
-  label?: string;
   active?: boolean;
   danger?: boolean;
+  variant?: "toggle" | "neutral";
   onClick?: () => void;
   title?: string;
 }) {
+
+  const stateClasses = danger
+    ? "bg-red-600 text-white hover:bg-red-700"
+    : variant === "toggle"
+    ? active
+      ? "bg-[#007CB2] text-white hover:brightness-110"
+      : "bg-slate-200 text-red-600 hover:bg-slate-300 dark:bg-slate-700 dark:text-red-500 dark:hover:bg-slate-600"
+    : active
+    ? "bg-slate-400 text-slate-900 hover:bg-slate-500 dark:bg-slate-500 dark:text-white dark:hover:bg-slate-400"
+    : "bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600";
+
   return (
     <button
       onClick={onClick}
       title={title}
+      aria-label={title}
       className={`
         flex
-        min-w-[56px]
-        flex-col
+        h-12
+        w-12
         items-center
-        gap-1
+        justify-center
         rounded-xl
-        px-3
-        py-2
-        text-[11px]
-        font-medium
+        text-xl
         transition
-        ${
-          danger
-            ? "bg-red-600 text-white hover:bg-red-700"
-            : active
-            ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-            : "bg-slate-200 text-slate-800 hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-        }
+        ${stateClasses}
       `}
     >
-      <span className="text-lg leading-none">
+      <span className="leading-none">
         {icon}
       </span>
-
-      {label && <span>{label}</span>}
     </button>
   );
 }
@@ -2992,14 +2998,15 @@ export default function VideoMeeting({
             className="
               grid
               grid-cols-3
+              justify-items-center
               gap-2
             "
           >
 
             <CallBarButton
               icon="🎙️"
-              label="Microfone"
-              active={!micOn}
+              variant="toggle"
+              active={micOn}
               onClick={toggleMic}
               title={
                 micOn
@@ -3010,8 +3017,8 @@ export default function VideoMeeting({
 
             <CallBarButton
               icon="📷"
-              label="Câmera"
-              active={!cameraOn}
+              variant="toggle"
+              active={cameraOn}
               onClick={toggleCamera}
               title={
                 cameraOn
@@ -3022,7 +3029,7 @@ export default function VideoMeeting({
 
             <CallBarButton
               icon="🖥️"
-              label="Compartilhar"
+              variant="toggle"
               active={sharingScreen}
               onClick={toggleScreenShare}
               title={
@@ -3036,7 +3043,6 @@ export default function VideoMeeting({
 
               <CallBarButton
                 icon="💬"
-                label="Chat"
                 onClick={onOpenChat}
                 title="Abrir o chat da sala"
               />
@@ -3056,7 +3062,6 @@ export default function VideoMeeting({
 
             <CallBarButton
               icon="📞"
-              label="Sair"
               danger
               onClick={leaveMeeting}
               title="Sair da chamada"

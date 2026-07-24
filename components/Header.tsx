@@ -25,8 +25,10 @@ export type Mention = {
   at: number;
   // Ausente (ou "room") = menção numa sala/DM, tratada por onMentionClick.
   // "general" = menção no Chat Geral, que não tem sala pra ir — só abre
-  // o próprio modal aqui dentro.
-  kind?: "room" | "general";
+  // o próprio modal aqui dentro. "poke" = fulano te cutucou — não tem
+  // lugar pra ir, só mostra quem e quando, e some assim que a pessoa
+  // fecha o sino (ver onDismissPokes).
+  kind?: "room" | "general" | "poke";
 };
 
 type RosterUser = {
@@ -38,13 +40,39 @@ type Props = {
   mentions?: Mention[];
   onMentionClick?: (room: string) => void;
   onClearMentions?: () => void;
+  onDismissPokes?: () => void;
   roster?: RosterUser[];
 };
+
+function formatPokeTimestamp(at: number) {
+
+  const date = new Date(at);
+
+  const dd = String(
+    date.getDate()
+  ).padStart(2, "0");
+
+  const mm = String(
+    date.getMonth() + 1
+  ).padStart(2, "0");
+
+  const hh = String(
+    date.getHours()
+  ).padStart(2, "0");
+
+  const min = String(
+    date.getMinutes()
+  ).padStart(2, "0");
+
+  return `${dd}.${mm}.${date.getFullYear()} ${hh}:${min}`;
+
+}
 
 export default function Header({
   mentions = [],
   onMentionClick,
   onClearMentions,
+  onDismissPokes,
   roster = [],
 }: Props) {
   const router = useRouter();
@@ -199,9 +227,19 @@ export default function Header({
 
           <button
             onClick={() =>
-              setShowMentions(
-                (current) => !current
-              )
+              setShowMentions((current) => {
+
+                const next = !current;
+
+                // Estava aberto e vai fechar: quem cutucou já foi
+                // visto, pode sumir da lista (não fica acumulando).
+                if (current && !next) {
+                  onDismissPokes?.();
+                }
+
+                return next;
+
+              })
             }
             title="Notificações"
             className="
@@ -279,6 +317,12 @@ export default function Header({
                       onClick={() => {
 
                         if (
+                          mention.kind === "poke"
+                        ) {
+                          // Sem lugar pra ir — só fecha (e já leva
+                          // junto o "some da lista" de todo cutucão).
+                          onDismissPokes?.();
+                        } else if (
                           mention.kind ===
                           "general"
                         ) {
@@ -304,18 +348,43 @@ export default function Header({
                       "
                     >
 
-                      <div className="text-xs font-semibold text-slate-200">
-                        {mention.fromNome}
-                        {" · "}
-                        {mention.kind ===
-                        "general"
-                          ? "Chat Geral"
-                          : mention.room}
-                      </div>
+                      {mention.kind === "poke" ? (
 
-                      <div className="truncate text-xs text-slate-400">
-                        {mention.message}
-                      </div>
+                        <>
+
+                          <div className="text-xs font-semibold text-slate-200">
+                            🔔 {mention.fromNome}{" "}
+                            quer falar com você
+                          </div>
+
+                          <div className="text-xs text-slate-400">
+                            {formatPokeTimestamp(
+                              mention.at
+                            )}
+                          </div>
+
+                        </>
+
+                      ) : (
+
+                        <>
+
+                          <div className="text-xs font-semibold text-slate-200">
+                            {mention.fromNome}
+                            {" · "}
+                            {mention.kind ===
+                            "general"
+                              ? "Chat Geral"
+                              : mention.room}
+                          </div>
+
+                          <div className="truncate text-xs text-slate-400">
+                            {mention.message}
+                          </div>
+
+                        </>
+
+                      )}
 
                     </button>
 
@@ -324,6 +393,7 @@ export default function Header({
                   <button
                     onClick={() => {
                       onClearMentions?.();
+                      onDismissPokes?.();
                       setShowMentions(false);
                     }}
                     className="

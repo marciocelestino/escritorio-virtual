@@ -755,6 +755,25 @@ socket.on(
       `🔔 ${fromNome} quer falar com você!`
     );
 
+    // Além do toast (que some sozinho em 3s e é fácil de perder),
+    // fica registrado no sino com data/hora — some de lá assim que a
+    // pessoa abre e fecha o sino (ver onDismissPokes em Header).
+    setMentions((prev) =>
+      [
+        {
+          id: `poke-${Date.now()}-${Math.random()
+            .toString(36)
+            .slice(2)}`,
+          room: "",
+          fromNome,
+          message: "",
+          at: Date.now(),
+          kind: "poke" as const,
+        },
+        ...prev,
+      ].slice(0, 20)
+    );
+
   }
 );
 
@@ -1362,6 +1381,14 @@ setCurrentUserId(
         onClearMentions={() =>
           setMentions([])
         }
+        onDismissPokes={() =>
+          setMentions((prev) =>
+            prev.filter(
+              (mention) =>
+                mention.kind !== "poke"
+            )
+          )
+        }
         roster={allUsers}
       />
 
@@ -1536,6 +1563,7 @@ setCurrentUserId(
 
               }}
               onSeatClick={handleSeatClick}
+              onOpenDm={openDm}
             />
 
           </div>
