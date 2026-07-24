@@ -64,3 +64,23 @@ export function verifySessionToken(
 ) {
   return getVerifiedUserId(token) === userId;
 }
+
+// Pra rotas GET que não têm corpo de requisição pra levar o token: usar
+// query string (?token=...) deixa a sessão exposta em lugares que
+// guardam a URL inteira — histórico do navegador, logs de acesso do
+// servidor/proxy (o Railway mostra a URL completa nos logs, por
+// exemplo). O header Authorization não fica gravado nesses lugares.
+export function getBearerToken(
+  req: Request
+): string | null {
+
+  const header = req.headers.get(
+    "authorization"
+  );
+
+  if (!header?.startsWith("Bearer ")) {
+    return null;
+  }
+
+  return header.slice("Bearer ".length);
+}

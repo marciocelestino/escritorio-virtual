@@ -513,11 +513,13 @@ if (!user) {
   return;
 }
 
-fetch(
-  `/api/users?token=${encodeURIComponent(
-    getSessionToken() ?? ""
-  )}`
-)
+fetch("/api/users", {
+  headers: {
+    Authorization: `Bearer ${
+      getSessionToken() ?? ""
+    }`,
+  },
+})
   .then((res) => res.json())
   .then((users) => {
     setRoster(

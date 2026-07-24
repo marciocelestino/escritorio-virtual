@@ -5,19 +5,21 @@ import {
   updateUser,
   emailInUseByAnotherUser,
 } from "@/lib/db";
-import { getVerifiedUserId } from "@/lib/authToken";
+import {
+  getVerifiedUserId,
+  getBearerToken,
+} from "@/lib/authToken";
 
 const MAX_AVATAR_LENGTH = 500_000;
 
 // Usado pra reler dados que mudam fora do fluxo de "Meus Dados" (ex.:
 // conectar o Spotify, que volta de um redirect pro OAuth em vez de passar
 // pelo PUT abaixo) — o localStorage guardado no login fica desatualizado
-// nesses casos.
+// nesses casos. Token via header Authorization, não query string (evita
+// ele ficar gravado em histórico/logs).
 export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url);
-
   const userId = getVerifiedUserId(
-    searchParams.get("token")
+    getBearerToken(req)
   );
 
   if (!userId) {

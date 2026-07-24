@@ -386,6 +386,16 @@ Lista de ideias já discutidas, mapeadas para retomar depois.
     ao vivo com múltiplos navegadores reais (limitação já conhecida
     deste ambiente) é arriscado demais pra fazer sem validação de
     verdade.
+- **Token de sessão sai da URL nas rotas GET**: `/api/users`, `/api/me` e
+  `/api/admin/users` agora recebem o token pelo header `Authorization:
+  Bearer` em vez de `?token=...` na query string — evita ele ficar
+  gravado em histórico do navegador e em logs de acesso (foi o que
+  disparou um bloqueio do Malwarebytes Browser Guard num dos
+  computadores da equipe). A única exceção que continua com token na
+  URL é `/api/spotify/authorize`, porque ali é uma navegação de verdade
+  (clique num link), não um fetch — não tem como anexar um header
+  nesse caso. De quebra, `/api/admin/users` parou de expor o
+  `spotifyRefreshToken` de cada pessoa pra qualquer admin.
 
 ## Ainda por fazer
 

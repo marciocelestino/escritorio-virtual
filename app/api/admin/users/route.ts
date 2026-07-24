@@ -9,7 +9,10 @@ import {
   countAdmins,
   emailInUseByAnotherUser,
 } from "@/lib/db";
-import { getVerifiedUserId } from "@/lib/authToken";
+import {
+  getVerifiedUserId,
+  getBearerToken,
+} from "@/lib/authToken";
 import { sendEmail, resolveSiteUrl } from "@/lib/email";
 
 function requireAdmin(token: unknown) {
@@ -31,12 +34,13 @@ function requireAdmin(token: unknown) {
   return user;
 }
 
+// Token via header Authorization, não query string (evita ele ficar
+// gravado em histórico/logs) — os outros métodos abaixo (POST/PATCH/
+// DELETE) já mandavam o token no corpo da requisição, sem esse problema.
 export async function GET(req: Request) {
-  const token = new URL(req.url).searchParams.get(
-    "token"
+  const admin = requireAdmin(
+    getBearerToken(req)
   );
-
-  const admin = requireAdmin(token);
 
   if (!admin) {
     return NextResponse.json(
@@ -47,7 +51,8 @@ export async function GET(req: Request) {
 
   const users = getAllUsers().map(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    ({ senhaHash, ...user }) => user
+    ({ senhaHash, spotifyRefreshToken, ...user }) =>
+      user
   );
 
   return NextResponse.json({ success: true, users });

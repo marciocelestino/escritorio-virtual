@@ -11,6 +11,11 @@ const SPOTIFY_SCOPES =
 // então a sessão vem como query param — o próprio token de sessão serve
 // de "state" do OAuth (assinado, com validade), sem precisar guardar
 // nada no servidor entre o redirect de ida e o de volta.
+// Único lugar do app onde o token de sessão continua na query string, de
+// propósito: aqui não é um fetch, é uma navegação de verdade (clique num
+// link/botão), então não tem como anexar um header Authorization — o
+// próprio "state" do OAuth também precisa ir pela URL, é assim que o
+// protocolo funciona.
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get("token");

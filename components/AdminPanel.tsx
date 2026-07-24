@@ -41,11 +41,11 @@ export default function AdminPanel({
 
     const token = getSessionToken();
 
-    fetch(
-      `/api/admin/users?token=${encodeURIComponent(
-        token ?? ""
-      )}`
-    )
+    fetch("/api/admin/users", {
+      headers: {
+        Authorization: `Bearer ${token ?? ""}`,
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
 

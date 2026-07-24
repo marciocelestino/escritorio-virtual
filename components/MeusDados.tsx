@@ -143,9 +143,11 @@ export default function MeusDados({
       return;
     }
 
-    fetch(
-      `/api/me?token=${encodeURIComponent(token)}`
-    )
+    fetch("/api/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
